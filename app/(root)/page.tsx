@@ -1,5 +1,7 @@
 import Link from "next/link";
 
+import { TrackedLink } from "@/app/_components/tracked-link";
+
 const features = [
 	{
 		title: "Two surfaces",
@@ -31,12 +33,14 @@ export default function HomePage() {
 				</p>
 
 				<div className="mt-10 flex flex-col gap-3 sm:flex-row">
-					<Link
+					<TrackedLink
 						href="/dashboard"
+						event="cta_click"
+						eventParams={{ location: "hero" }}
 						className="inline-flex h-11 items-center justify-center rounded-full bg-accent px-6 text-sm font-medium text-accent-foreground transition-opacity hover:opacity-90"
 					>
 						Open the dashboard
-					</Link>
+					</TrackedLink>
 					<Link
 						href="/#features"
 						className="inline-flex h-11 items-center justify-center rounded-full border border-border px-6 text-sm font-medium transition-colors hover:bg-surface-muted"

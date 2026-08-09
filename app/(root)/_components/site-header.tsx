@@ -1,5 +1,7 @@
 import Link from "next/link";
 
+import { TrackedLink } from "@/app/_components/tracked-link";
+
 const navigation = [
 	{ href: "/#features", label: "Features" },
 	{ href: "/#pricing", label: "Pricing" },
@@ -26,12 +28,14 @@ export function SiteHeader() {
 					))}
 				</nav>
 
-				<Link
+				<TrackedLink
 					href="/dashboard"
+					event="cta_click"
+					eventParams={{ location: "header" }}
 					className="rounded-full bg-accent px-4 py-2 text-sm font-medium text-accent-foreground transition-opacity hover:opacity-90"
 				>
 					Dashboard
-				</Link>
+				</TrackedLink>
 			</div>
 		</header>
 	);
