@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 
 import { AppSidebar } from "./_components/app-sidebar";
 import { AppTopbar } from "./_components/app-topbar";
+import { UserSync } from "./_components/user-sync";
 import { WalletProvider } from "./_components/wallet-provider";
 
 /* The product surface is behind auth and has nothing to index. */
@@ -21,6 +22,8 @@ export default function AppLayout({
 }>) {
 	return (
 		<WalletProvider>
+			<UserSync />
+
 			<div className="ds-app flex min-h-full flex-1 bg-surface-muted text-foreground">
 				<AppSidebar />
 
