@@ -1,5 +1,12 @@
+import type { Metadata } from "next";
+
 import { AppSidebar } from "./_components/app-sidebar";
 import { AppTopbar } from "./_components/app-topbar";
+
+/* The product surface is behind auth and has nothing to index. */
+export const metadata: Metadata = {
+	robots: { index: false, follow: false },
+};
 
 /*
  * Product chrome: fixed sidebar beside a scrolling work area under a topbar.
