@@ -1,6 +1,7 @@
 import "server-only";
 
 import { PrivyClient, type User } from "@privy-io/server-auth";
+import { cookies } from "next/headers";
 
 import type { PrivyUserSnapshot } from "@/lib/db/users";
 
@@ -75,6 +76,31 @@ export async function resolveUser(
 	} catch {
 		return null;
 	}
+}
+
+/**
+ * The server-side security boundary. Reads the session cookie, verifies it,
+ * and returns the user — or null. Reading cookies opts the caller into dynamic
+ * rendering, which is correct for anything user-specific.
+ *
+ * Every Server Component or Route Handler that exposes user data must call
+ * this. Never infer identity from a client-supplied value, and never treat
+ * proxy.ts as sufficient: it only checks that a cookie is present.
+ */
+export async function getSessionUser(): Promise<User | null> {
+	if (!isServerAuthConfigured) return null;
+
+	const cookieStore = await cookies();
+	const session = await verifySession(
+		cookieStore.get(ACCESS_TOKEN_COOKIE)?.value,
+	);
+
+	if (!session) return null;
+
+	return resolveUser(
+		session.userId,
+		cookieStore.get(IDENTITY_TOKEN_COOKIE)?.value,
+	);
 }
 
 /** Flatten Privy's user object into the shape lib/db/users persists. */

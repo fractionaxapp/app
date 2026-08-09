@@ -28,10 +28,6 @@ export async function POST() {
 		return NextResponse.json({ error: "auth_not_configured" }, { status: 503 });
 	}
 
-	if (!isDatabaseEnabled) {
-		return NextResponse.json({ error: "database_not_configured" }, { status: 503 });
-	}
-
 	const cookieStore = await cookies();
 	const session = await verifySession(
 		cookieStore.get(ACCESS_TOKEN_COOKIE)?.value,
@@ -39,6 +35,15 @@ export async function POST() {
 
 	if (!session) {
 		return NextResponse.json({ error: "unauthenticated" }, { status: 401 });
+	}
+
+	// Checked after authentication so anonymous callers learn nothing about
+	// how the backend is provisioned.
+	if (!isDatabaseEnabled) {
+		return NextResponse.json(
+			{ error: "database_not_configured" },
+			{ status: 503 },
+		);
 	}
 
 	const user = await resolveUser(

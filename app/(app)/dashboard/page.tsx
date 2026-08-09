@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 
+import { getSessionUser } from "@/lib/wallet/server";
+
 export const metadata: Metadata = {
 	title: "Dashboard",
 };
@@ -10,7 +12,14 @@ const metrics = [
 	{ label: "Conversion", value: "—", hint: "No data source connected" },
 ];
 
-export default function DashboardPage() {
+/*
+ * The server-side boundary: identity comes from the verified session cookie,
+ * never from the client. Reading it opts this route into dynamic rendering,
+ * which is correct for anything user-specific.
+ */
+export default async function DashboardPage() {
+	const user = await getSessionUser();
+
 	return (
 		<div className="mx-auto flex w-full max-w-5xl flex-col gap-6">
 			<section className="grid gap-4 sm:grid-cols-3">
@@ -29,7 +38,11 @@ export default function DashboardPage() {
 			</section>
 
 			<section className="rounded-lg border border-border bg-surface p-6">
-				<h2 className="font-medium">Overview</h2>
+				<h2 className="font-medium">
+					{user?.email?.address
+						? `Signed in as ${user.email.address}`
+						: "Overview"}
+				</h2>
 				<p className="mt-2 max-w-prose text-muted">
 					This route lives in the (app) group. Add sibling routes beside it and
 					they inherit the sidebar and topbar automatically, without touching
