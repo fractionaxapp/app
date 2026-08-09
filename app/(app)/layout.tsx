@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 
 import { AppSidebar } from "./_components/app-sidebar";
 import { AppTopbar } from "./_components/app-topbar";
+import { WalletProvider } from "./_components/wallet-provider";
 
 /* The product surface is behind auth and has nothing to index. */
 export const metadata: Metadata = {
@@ -19,13 +20,15 @@ export default function AppLayout({
 	children: React.ReactNode;
 }>) {
 	return (
-		<div className="ds-app flex min-h-full flex-1 bg-surface-muted text-foreground">
-			<AppSidebar />
+		<WalletProvider>
+			<div className="ds-app flex min-h-full flex-1 bg-surface-muted text-foreground">
+				<AppSidebar />
 
-			<div className="flex min-w-0 flex-1 flex-col">
-				<AppTopbar />
-				<main className="flex-1 p-6">{children}</main>
+				<div className="flex min-w-0 flex-1 flex-col">
+					<AppTopbar />
+					<main className="flex-1 p-6">{children}</main>
+				</div>
 			</div>
-		</div>
+		</WalletProvider>
 	);
 }
