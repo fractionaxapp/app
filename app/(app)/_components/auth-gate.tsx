@@ -12,7 +12,14 @@ import Loading from "../loading";
  * happens, since the wallet SDK only mounts inside this route group.
  */
 export function AuthGate({ children }: { children: React.ReactNode }) {
-	const { isReady, isAuthenticated, signIn } = useAuth();
+	const { isEnabled, isReady, isAuthenticated, signIn } = useAuth();
+
+	/*
+	 * No Privy app id configured — local development, previews, or before the
+	 * account exists. Show the surface rather than an inert sign-in screen, so
+	 * the dashboard stays workable without credentials.
+	 */
+	if (!isEnabled) return <>{children}</>;
 
 	// Restoring an existing session — reuse the route's own skeleton so the
 	// layout does not shift once it resolves.

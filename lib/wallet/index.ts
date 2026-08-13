@@ -3,6 +3,8 @@
 import { useCreateWallet, usePrivy, useWallets, type User } from "@privy-io/react-auth";
 import { useCallback, useMemo } from "react";
 
+import { isWalletEnabled } from "./config";
+
 /*
  * The only module in the app allowed to import from @privy-io/*.
  *
@@ -35,20 +37,47 @@ function toAuthUser(user: User | null): AuthUser | null {
 	};
 }
 
-export function useAuth() {
+export type AuthState = {
+	/** False when no Privy app id is configured for this build. */
+	isEnabled: boolean;
+	/** False until the SDK has restored any existing session. */
+	isReady: boolean;
+	isAuthenticated: boolean;
+	user: AuthUser | null;
+	signIn: () => void;
+	signOut: () => void;
+};
+
+export function useAuth(): AuthState {
 	const { ready, authenticated, user, login, logout } = usePrivy();
 
-	return useMemo(
-		() => ({
-			/** False until the SDK has restored any existing session. */
+	return useMemo(() => {
+		/*
+		 * With no app id the provider never mounts, so usePrivy falls back to
+		 * its default context where `ready` stays false forever. Report a
+		 * settled, signed-out state instead — otherwise anything waiting on
+		 * `isReady` hangs on its loading state permanently.
+		 */
+		if (!isWalletEnabled) {
+			return {
+				isEnabled: false,
+				isReady: true,
+				isAuthenticated: false,
+				user: null,
+				signIn: () => {},
+				signOut: () => {},
+			};
+		}
+
+		return {
+			isEnabled: true,
 			isReady: ready,
 			isAuthenticated: ready && authenticated,
 			user: toAuthUser(user),
 			signIn: login,
 			signOut: logout,
-		}),
-		[ready, authenticated, user, login, logout],
-	);
+		};
+	}, [ready, authenticated, user, login, logout]);
 }
 
 /*
