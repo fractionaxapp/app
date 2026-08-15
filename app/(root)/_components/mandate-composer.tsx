@@ -59,13 +59,17 @@ const defaults: Record<FieldId, string> = {
 	risk: "moderate",
 };
 
+/*
+ * Sits on the base background so the FAQ band above it reads as separate; the
+ * fields keep bg-surface and now sit raised against it.
+ */
 export function MandateComposer() {
 	const [values, setValues] = useState(defaults);
 
 	const mandate = `${values.asset} yielding ${values.yield}, minimum ${values.minimum}, ${values.region} exposure, ${values.risk} risk.`;
 
 	return (
-		<section id="start" className="fx-section fx-bleed scroll-mt-14 bg-surface">
+		<section id="start" className="fx-section fx-bleed scroll-mt-14">
 			<div className="grid items-start gap-8 lg:grid-cols-[1fr_2fr_1fr]">
 				<p className="fx-eyebrow text-muted">Get started</p>
 
@@ -97,7 +101,7 @@ export function MandateComposer() {
 										[field.id]: event.target.value,
 									}))
 								}
-								className="w-full cursor-pointer appearance-none border-0 bg-transparent pr-7 font-mono text-base tracking-tight text-foreground focus:outline-none focus-visible:text-accent"
+								className="w-full cursor-pointer appearance-none border-0 bg-transparent pr-7 font-mono text-base tracking-tight text-foreground focus:outline-none focus-visible:text-primary"
 							>
 								{field.options.map((option) => (
 									<option key={option} value={option} className="bg-surface">
@@ -109,7 +113,7 @@ export function MandateComposer() {
 							<svg
 								viewBox="0 0 12 12"
 								aria-hidden
-								className="pointer-events-none absolute top-1/2 right-0 size-3 -translate-y-1/2 text-accent"
+								className="pointer-events-none absolute top-1/2 right-0 size-3 -translate-y-1/2 text-primary"
 							>
 								<path
 									d="M2 4.5 6 8.5 10 4.5"

@@ -9,10 +9,10 @@ import { Wordmark } from "./logo";
 import { Arrow } from "./ui";
 
 const navigation = [
-	{ href: "/#why-now", label: "Why now" },
-	{ href: "/#problem", label: "The problem" },
-	{ href: "/#workflow", label: "Workflow" },
-	{ href: "/#platform", label: "Platform" },
+	{ href: "/#workflow", label: "How it works" },
+	{ href: "/#control", label: "Control" },
+	{ href: "/#platform", label: "Underneath" },
+	{ href: "/#faq", label: "FAQ" },
 ];
 
 export function SiteHeader() {
@@ -49,9 +49,9 @@ export function SiteHeader() {
 						href="/dashboard"
 						event="cta_click"
 						eventParams={{ location: "header" }}
-						className="fx-eyebrow hidden min-w-44 items-center justify-between gap-4 bg-accent px-5 font-semibold text-accent-foreground transition-opacity hover:opacity-85 sm:flex"
+						className="fx-eyebrow hidden min-w-44 items-center justify-between gap-4 bg-primary px-5 font-semibold text-primary-foreground transition-opacity hover:opacity-85 sm:flex"
 					>
-						Request access
+						Join the beta
 						<Arrow className="size-3" />
 					</TrackedLink>
 
@@ -97,9 +97,9 @@ export function SiteHeader() {
 						event="cta_click"
 						eventParams={{ location: "header_mobile" }}
 						onClick={() => setIsOpen(false)}
-						className="fx-eyebrow flex min-h-13 items-center justify-between gap-4 bg-accent px-5 font-semibold text-accent-foreground"
+						className="fx-eyebrow flex min-h-13 items-center justify-between gap-4 bg-primary px-5 font-semibold text-primary-foreground"
 					>
-						Request access
+						Join the beta
 						<Arrow className="size-3" />
 					</TrackedLink>
 				</nav>

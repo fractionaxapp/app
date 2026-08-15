@@ -4,11 +4,11 @@ import { Wordmark } from "./logo";
 
 const groups = [
 	{
-		heading: "Platform",
+		heading: "Product",
 		links: [
-			{ href: "/#workflow", label: "Workflow" },
-			{ href: "/#platform", label: "Surfaces" },
-			{ href: "/#why-now", label: "Why now" },
+			{ href: "/#workflow", label: "How it works" },
+			{ href: "/#control", label: "Control" },
+			{ href: "/#faq", label: "FAQ" },
 		],
 	},
 	{
@@ -51,7 +51,7 @@ export function SiteFooter() {
 								<li key={link.href}>
 									<Link
 										href={link.href}
-										className="transition-colors hover:text-accent"
+										className="transition-colors hover:text-primary"
 									>
 										{link.label}
 									</Link>
