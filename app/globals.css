@@ -25,6 +25,37 @@
 	}
 }
 
+/*
+ * Fractionax brand palette, scoped to the marketing surface.
+ *
+ * Committed dark: the brand reads as an institutional terminal, not a
+ * themeable page, so these deliberately ignore prefers-color-scheme. The
+ * product surface under (app) keeps the adaptive tokens above untouched.
+ *
+ * body is matched too, via :has(), because it sits outside .ds-web — without
+ * it, overscroll and the area behind a short page flash the light background.
+ */
+.ds-web,
+body:has(.ds-web) {
+	color-scheme: dark;
+
+	/* Near-black and warm cream, not black and white — the neutrals carry a
+	   yellow cast so the signal colour sits inside the same family. */
+	--background: #050505;
+	--foreground: #f3f1eb;
+	--surface: #0c0c0c;
+	--surface-muted: #141412;
+	--border: #2a2a2a;
+	--muted: #aaa8a0;
+	--accent: #f2b33d;
+	--accent-foreground: #050505;
+
+	/* Brand-only, no counterpart in the product scale. */
+	--accent-secondary: #7fd6a4;
+	/* Hairline that reads as light catching an edge, not as a border. */
+	--edge: rgb(243 241 235 / 0.08);
+}
+
 @theme inline {
 	--color-background: var(--background);
 	--color-foreground: var(--foreground);
@@ -34,6 +65,8 @@
 	--color-muted: var(--muted);
 	--color-accent: var(--accent);
 	--color-accent-foreground: var(--accent-foreground);
+	--color-accent-secondary: var(--accent-secondary);
+	--color-edge: var(--edge);
 	--font-sans: var(--font-app-sans);
 	--font-mono: var(--font-app-mono);
 }
@@ -57,4 +90,131 @@ body {
 .ds-app {
 	font-size: 0.875rem;
 	line-height: 1.5;
+}
+
+/*
+ * Marketing primitives.
+ *
+ * The surface is built from full-bleed bands separated by hairlines, not from
+ * a centred column of rounded cards. These few classes carry the structure and
+ * the display type, because each bundles five or six declarations that would
+ * be unreadable repeated across every section as utilities.
+ */
+
+/* Full-bleed gutter. Viewport-relative, so the type scales with the band. */
+.fx-bleed {
+	padding-inline: clamp(20px, 3.2vw, 68px);
+}
+
+/* One band. Every section closes with a rule; the page is a stack of them. */
+.fx-section {
+	border-bottom: 1px solid var(--border);
+	padding-block: clamp(72px, 8vw, 140px);
+}
+
+/*
+ * Display type: uppercase, heavy, set tight enough that lines interlock. The
+ * sub-1 line-height is deliberate and only works because it is all-caps —
+ * there are no descenders to collide.
+ */
+.fx-display {
+	font-size: clamp(44px, 7.6vw, 132px);
+	font-weight: 800;
+	line-height: 0.84;
+	letter-spacing: -0.055em;
+	text-transform: uppercase;
+	text-wrap: balance;
+}
+
+.fx-heading {
+	font-size: clamp(30px, 4.4vw, 74px);
+	font-weight: 800;
+	line-height: 0.92;
+	letter-spacing: -0.045em;
+	text-transform: uppercase;
+	text-wrap: balance;
+}
+
+/* Every label on the page: mono, uppercase, small, loosely tracked. */
+.fx-eyebrow {
+	font-family: var(--font-app-mono), ui-monospace, monospace;
+	font-size: 11px;
+	line-height: 1.2;
+	letter-spacing: 0.05em;
+	text-transform: uppercase;
+}
+
+/* Vertical rules quartering a band, like ruled paper behind the content. */
+.fx-rules {
+	background-image: linear-gradient(
+		90deg,
+		transparent calc(25% - 0.5px),
+		var(--border) 25%,
+		transparent calc(25% + 0.5px),
+		transparent calc(50% - 0.5px),
+		var(--border) 50%,
+		transparent calc(50% + 0.5px),
+		transparent calc(75% - 0.5px),
+		var(--border) 75%,
+		transparent calc(75% + 0.5px)
+	);
+}
+
+/* Hollow type that fills in on hover — the workflow verbs use it. */
+.fx-outline {
+	color: transparent;
+	-webkit-text-stroke: 1.2px var(--muted);
+	transition:
+		color 0.25s,
+		-webkit-text-stroke-color 0.25s;
+}
+
+.fx-outline:hover,
+.fx-outline[data-active="true"] {
+	color: var(--foreground);
+	-webkit-text-stroke-color: transparent;
+}
+
+/* Continuous ticker. The track holds the list twice, so -50% loops seamlessly. */
+@keyframes fx-marquee {
+	from {
+		transform: translateX(0);
+	}
+	to {
+		transform: translateX(-50%);
+	}
+}
+
+.fx-marquee {
+	animation: fx-marquee 46s linear infinite;
+}
+
+/*
+ * Fills the rail beside the active step in the mandate console, in step with
+ * the auto-advance interval. Keyed remounting restarts it; the duration comes
+ * from the component so the timing lives in one place.
+ */
+@keyframes fx-fill {
+	from {
+		transform: scaleX(0);
+	}
+	to {
+		transform: scaleX(1);
+	}
+}
+
+.fx-fill {
+	transform-origin: left;
+	animation: fx-fill var(--fx-duration, 3.2s) linear forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.fx-marquee {
+		animation: none;
+	}
+
+	.fx-fill {
+		animation: none;
+		transform: scaleX(1);
+	}
 }

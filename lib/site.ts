@@ -12,24 +12,34 @@
 const url = new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000");
 
 export const siteConfig = {
-	name: "App",
-	shortName: "App",
+	name: "Fractionax",
+	shortName: "Fractionax",
 	description:
-		"A Next.js application with a marketing site and a product dashboard.",
+		"AI agents that find, underwrite, and execute private-market investments on-chain. The decision layer for tokenized real-world assets.",
 	url,
 	/** BCP 47 tag for <html lang>. */
 	lang: "en",
 	/** Underscored form Open Graph expects. */
 	locale: "en_US",
-	creator: "App",
-	publisher: "App",
-	category: "technology",
-	keywords: ["Next.js", "React", "TypeScript", "Dashboard"],
+	creator: "Fractionax",
+	publisher: "Fractionax",
+	category: "finance",
+	keywords: [
+		"real-world assets",
+		"RWA",
+		"tokenization",
+		"private markets",
+		"AI agents",
+		"onchain settlement",
+		"private credit",
+	],
 	/** Handle without the URL, e.g. "@app". Leave empty to omit the tag. */
 	twitterHandle: "",
 	colors: {
-		light: "#ffffff",
-		dark: "#0a0a0a",
+		// The marketing surface is committed dark in both schemes, so the
+		// browser chrome should be too — see .ds-web in app/globals.css.
+		light: "#050505",
+		dark: "#050505",
 	},
 } as const;
 
