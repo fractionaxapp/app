@@ -1,7 +1,13 @@
 /*
- * The asset classes the agents cover, as a continuous ticker. Two tracks
- * running against each other: one solid, one hollow. The list is rendered
- * twice per track so translating by -50% lands exactly on the seam.
+ * The asset classes the agents cover, as a continuous ticker.
+ *
+ * Hollow and moving by default. Hovering stops the track and fills the word
+ * under the pointer; leaving it starts the track again and the word empties.
+ * All CSS — there is no state here worth a client component.
+ *
+ * The sequence is rendered twice so translating by -50% lands exactly on the
+ * seam. The second copy is hidden from assistive tech, which would otherwise
+ * read the whole list through twice.
  */
 
 const classes = [
@@ -15,29 +21,19 @@ const classes = [
 	"Royalties",
 ];
 
-function Track({
-	reverse,
-	hollow,
-}: {
-	reverse?: boolean;
-	hollow?: boolean;
-}) {
+/** Shared so the separators sit on the same baseline as the words. */
+const TYPE =
+	"text-[clamp(30px,4.4vw,72px)] leading-none font-extrabold tracking-[-0.045em] whitespace-nowrap uppercase";
+
+function Sequence({ hidden }: { hidden?: boolean }) {
 	return (
-		<div
-			aria-hidden={reverse}
-			className={`fx-marquee flex w-max items-center ${
-				reverse ? "[animation-direction:reverse]" : ""
-			}`}
-		>
-			{[...classes, ...classes].map((label, index) => (
-				<span
-					key={`${label}-${index}`}
-					className={`flex items-center text-[clamp(28px,4.2vw,68px)] leading-none font-extrabold tracking-[-0.045em] whitespace-nowrap uppercase ${
-						hollow ? "fx-outline" : ""
-					}`}
-				>
-					{label}
-					<span className="mx-6 text-accent sm:mx-9" aria-hidden>
+		<div className="flex items-center" aria-hidden={hidden}>
+			{classes.map((label) => (
+				<span key={label} className="flex items-center">
+					{/* The separator is a sibling, not a child — nesting it would
+					    give it the word's outline and its fill on hover. */}
+					<span className={`fx-outline ${TYPE}`}>{label}</span>
+					<span className={`mx-6 text-accent sm:mx-9 ${TYPE}`} aria-hidden>
 						/
 					</span>
 				</span>
@@ -50,9 +46,10 @@ export function Marquee() {
 	return (
 		<section className="overflow-hidden border-b border-border py-[clamp(36px,4.5vw,72px)]">
 			<h2 className="sr-only">Asset classes covered</h2>
-			<Track />
-			<div className="mt-[clamp(8px,1vw,18px)]">
-				<Track reverse hollow />
+
+			<div className="fx-marquee flex w-max">
+				<Sequence />
+				<Sequence hidden />
 			</div>
 		</section>
 	);
