@@ -39,21 +39,45 @@
 body:has(.ds-web) {
 	color-scheme: dark;
 
-	/* Near-black and warm cream, not black and white — the neutrals carry a
-	   yellow cast so the signal colour sits inside the same family. */
-	--background: #050505;
-	--foreground: #f3f1eb;
-	--surface: #0c0c0c;
-	--surface-muted: #141412;
-	--border: #2a2a2a;
-	--muted: #aaa8a0;
-	--accent: #f2b33d;
-	--accent-foreground: #050505;
+	--background: #191919;
+	--foreground: #f6f6f6;
+	/* Two lifts above the ground, for the alternating bands and for hovers. */
+	--surface: #212121;
+	--surface-muted: #282828;
+	--border: #333333;
+	--muted: #c3c3c3;
 
-	/* Brand-only, no counterpart in the product scale. */
-	--accent-secondary: #7fd6a4;
+	/*
+	 * Two brand colours with a strict division of labour, so they inform rather
+	 * than compete:
+	 *
+	 *   primary — anything you act on. Buttons, the mark, approved state, live
+	 *             indicators, focus and hover.
+	 *   accent  — anything you read. Figures, indices, endpoint labels, status
+	 *             chips, the marquee rules.
+	 *
+	 * Nothing clickable is ever gold, and no static figure is ever teal.
+	 */
+	--primary: #16af8e;
+	--accent: #f9b73f;
+	/* Ground on either, never foreground: cream on primary is only 2.6:1. */
+	--primary-foreground: #191919;
+	--accent-foreground: #191919;
+
+	/*
+	 * Brand-only, no counterpart in the product scale.
+	 *
+	 * popover is the one light surface here: it carries the moment a flow
+	 * finishes, so completion reads as an inversion rather than another card.
+	 * danger is lifted from #d95448, which only reached 4.45:1 on this ground.
+	 * Both are always paired with a label and an icon — colour is never the
+	 * only signal.
+	 */
+	--popover: #f9f3d9;
+	--popover-foreground: #191919;
+	--danger: #e56a5e;
 	/* Hairline that reads as light catching an edge, not as a border. */
-	--edge: rgb(243 241 235 / 0.08);
+	--edge: rgb(246 246 246 / 0.08);
 }
 
 @theme inline {
@@ -63,9 +87,13 @@ body:has(.ds-web) {
 	--color-surface-muted: var(--surface-muted);
 	--color-border: var(--border);
 	--color-muted: var(--muted);
+	--color-primary: var(--primary);
+	--color-primary-foreground: var(--primary-foreground);
 	--color-accent: var(--accent);
 	--color-accent-foreground: var(--accent-foreground);
-	--color-accent-secondary: var(--accent-secondary);
+	--color-popover: var(--popover);
+	--color-popover-foreground: var(--popover-foreground);
+	--color-danger: var(--danger);
 	--color-edge: var(--edge);
 	--font-sans: var(--font-app-sans);
 	--font-mono: var(--font-app-mono);
@@ -101,9 +129,18 @@ body {
  * be unreadable repeated across every section as utilities.
  */
 
-/* Full-bleed gutter. Viewport-relative, so the type scales with the band. */
+/*
+ * The gutter every band aligns its content to. Viewport-relative, so the
+ * column widens with the type. Exposed as a variable rather than inlined
+ * because full-bleed strips — ones whose rules run to the screen edge — have
+ * to pad their own cells to the same value to stay in the column.
+ */
+:root {
+	--gutter: clamp(20px, 3.2vw, 68px);
+}
+
 .fx-bleed {
-	padding-inline: clamp(20px, 3.2vw, 68px);
+	padding-inline: var(--gutter);
 }
 
 /* One band. Every section closes with a rule; the page is a stack of them. */
@@ -124,6 +161,15 @@ body {
 	letter-spacing: -0.055em;
 	text-transform: uppercase;
 	text-wrap: balance;
+}
+
+/*
+ * Display type inside a full-height fold. Identical to .fx-display except the
+ * size also answers to viewport height — otherwise a 13" laptop in landscape
+ * gets a headline sized for its width and no room left for anything under it.
+ */
+.fx-display-fold {
+	font-size: clamp(36px, min(7.2vw, 10vh), 120px);
 }
 
 .fx-heading {
@@ -170,9 +216,28 @@ body {
 }
 
 .fx-outline:hover,
-.fx-outline[data-active="true"] {
+.fx-outline[data-active="true"],
+/* A disclosure fills its question while hovered, and stays filled once open. */
+summary:hover .fx-outline,
+details[open] .fx-outline {
 	color: var(--foreground);
 	-webkit-text-stroke-color: transparent;
+}
+
+/* Answers arrive rather than appear. <details> has no native transition. */
+@keyframes fx-reveal {
+	from {
+		opacity: 0;
+		transform: translateY(-6px);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}
+
+.fx-reveal {
+	animation: fx-reveal 0.35s ease both;
 }
 
 /* Continuous ticker. The track holds the list twice, so -50% loops seamlessly. */
@@ -187,6 +252,15 @@ body {
 
 .fx-marquee {
 	animation: fx-marquee 46s linear infinite;
+}
+
+/*
+ * Stop the ticker while the pointer is over it. Without this, filling a word
+ * on hover is a trap — the word slides out from under the cursor the instant
+ * it lights up, and the fill flickers between neighbours.
+ */
+.fx-marquee:hover {
+	animation-play-state: paused;
 }
 
 /*
@@ -216,5 +290,9 @@ body {
 	.fx-fill {
 		animation: none;
 		transform: scaleX(1);
+	}
+
+	.fx-reveal {
+		animation: none;
 	}
 }

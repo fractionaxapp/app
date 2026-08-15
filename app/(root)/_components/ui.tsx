@@ -31,7 +31,7 @@ export function actionClass(variant: "solid" | "ghost" = "solid") {
 		"fx-eyebrow inline-flex min-h-13 items-center justify-between gap-7 px-5 font-semibold transition-colors";
 
 	return variant === "solid"
-		? `${base} border border-accent bg-accent text-accent-foreground hover:bg-transparent hover:text-accent`
+		? `${base} border border-primary bg-primary text-primary-foreground hover:bg-transparent hover:text-primary`
 		: `${base} border border-border text-foreground hover:border-foreground`;
 }
 

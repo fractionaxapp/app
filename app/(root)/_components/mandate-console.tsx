@@ -101,10 +101,10 @@ export function MandateConsole() {
 			<div className="flex items-center justify-between gap-4 border-b border-border px-5 py-3.5">
 				<p className="fx-eyebrow text-muted">Mandate · live</p>
 
-				<p className="fx-eyebrow flex items-center gap-2.5 text-accent">
+				<p className="fx-eyebrow flex items-center gap-2.5 text-primary">
 					<span className="relative flex size-1.5">
-						<span className="absolute inline-flex size-full animate-ping bg-accent opacity-70" />
-						<span className="relative inline-flex size-1.5 bg-accent" />
+						<span className="absolute inline-flex size-full animate-ping bg-primary opacity-70" />
+						<span className="relative inline-flex size-1.5 bg-primary" />
 					</span>
 					Running
 				</p>
@@ -142,7 +142,7 @@ export function MandateConsole() {
 					{/* Keyed so advancing remounts it and the fill restarts. */}
 					<span
 						key={activeIndex}
-						className="fx-fill block h-px bg-accent"
+						className="fx-fill block h-px bg-primary"
 						style={
 							{ "--fx-duration": `${STEP_DURATION_MS}ms` } as React.CSSProperties
 						}

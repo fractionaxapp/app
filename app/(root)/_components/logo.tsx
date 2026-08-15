@@ -28,7 +28,7 @@ export function LogoMark({ className }: { className?: string }) {
 export function Wordmark({ className }: { className?: string }) {
 	return (
 		<span className={`flex items-center gap-2.5 ${className ?? ""}`}>
-			<LogoMark className="size-5 text-accent" />
+			<LogoMark className="size-5 text-primary" />
 			<span className="text-[15px] font-extrabold tracking-[-0.04em] uppercase">
 				Fractionax
 			</span>
