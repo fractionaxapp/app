@@ -1,41 +1,51 @@
 import { SectionHeading } from "./ui";
 
 /*
- * Reframed from six API endpoints to six outcomes.
+ * Six primitives drawn as a stack rather than a card grid — the section is
+ * called Underneath, and a spine running down through six strata says that
+ * better than six equal boxes.
  *
- * The audience here allocates capital; it does not integrate. The old version
- * also led with Tokenization, which is the one thing the hero says everyone
- * else does — the section was arguing against its own headline.
+ * Each layer states the chore first and strikes it out, because the heading
+ * promises six things you do not have to do and a card that only lists the
+ * benefit never shows what was taken away. This is also where the substance
+ * of the old problem-statement section went: the frictions are still here,
+ * attached to the thing that removes them instead of standing alone.
  */
 
-const surfaces = [
+const layers = [
 	{
-		title: "Identity",
+		name: "Identity",
+		chore: "Prove accreditation to every issuer, one at a time",
 		claim: "Verified once, reused everywhere",
-		body: "Prove accreditation a single time. Every issuer that accepts it clears you without another form.",
+		body: "Prove it a single time. Every issuer that accepts your verification clears you without another form.",
 	},
 	{
-		title: "Eligibility",
+		name: "Eligibility",
+		chore: "Find out you are not permitted after you have chosen",
 		claim: "Resolved before you see the deal",
 		body: "Jurisdiction, accreditation and transfer restrictions checked per asset, so nothing on your shortlist is something you cannot actually buy.",
 	},
 	{
-		title: "Asset data",
+		name: "Asset data",
+		chore: "Rebuild every offering memo into your own spreadsheet",
 		claim: "Every document, one schema",
-		body: "Offering memos, term sheets, payment histories and secondary marks parsed into the same comparable fields.",
+		body: "Memos, term sheets, payment histories and secondary marks parsed into the same comparable fields.",
 	},
 	{
-		title: "Underwriting",
+		name: "Underwriting",
+		chore: "Skip the small deals because the work does not pay",
 		claim: "The same model on every deal",
 		body: "No offering gets a lighter read because the cheque is small. A $25K allocation is underwritten like a $25M one.",
 	},
 	{
-		title: "Execution",
+		name: "Execution",
+		chore: "Police your own size and counterparty limits each trade",
 		claim: "Inside the limits you set",
 		body: "Settlement on-chain, bounded by the size, venue and counterparty rules attached to your mandate.",
 	},
 	{
-		title: "Portfolio",
+		name: "Portfolio",
+		chore: "Track distributions in a spreadsheet and hope",
 		claim: "Watched after the trade",
 		body: "Distributions, covenants and marks tracked continuously by the model that underwrote the position.",
 	},
@@ -50,27 +60,56 @@ export function Platform() {
 				copy="Most of the work in a private-market allocation is administrative. None of it is yours."
 			/>
 
-			<div className="mt-[clamp(48px,6vw,96px)] grid gap-px bg-border sm:grid-cols-2 lg:grid-cols-3">
-				{surfaces.map((surface, index) => (
-					<article
-						key={surface.title}
-						className="bg-background p-6 transition-colors hover:bg-surface sm:p-8"
+			<ol className="mt-[clamp(48px,6vw,96px)] border-y border-border">
+				{layers.map((layer, index) => (
+					<li
+						key={layer.name}
+						className="group grid gap-x-8 gap-y-5 border-t border-border py-7 transition-colors first:border-t-0 hover:bg-surface md:grid-cols-[4.5rem_1fr] lg:grid-cols-[4.5rem_1.1fr_1.3fr]"
 					>
-						<p className="fx-eyebrow flex items-baseline gap-3 text-muted">
-							<span className="text-accent tabular-nums">
+						{/*
+						 * The spine. One continuous rule through every layer, with each
+						 * index sitting on it as a node — which is what makes six rows
+						 * read as a cross-section instead of a list.
+						 */}
+						<div className="relative">
+							<span
+								aria-hidden
+								className="absolute top-[-1.75rem] bottom-[-1.75rem] left-[3px] w-px bg-surface-muted"
+							/>
+							<span
+								aria-hidden
+								className="absolute top-1.5 left-0 size-1.5 bg-accent transition-colors group-hover:bg-primary"
+							/>
+							<span className="fx-eyebrow block pl-6 text-muted tabular-nums">
 								{String(index + 1).padStart(2, "0")}
 							</span>
-							{surface.title}
-						</p>
+						</div>
 
-						<h3 className="mt-5 text-lg leading-tight font-extrabold tracking-[-0.03em] uppercase">
-							{surface.claim}
-						</h3>
+						<div>
+							<p className="fx-eyebrow text-muted">{layer.name}</p>
+							<h3 className="mt-3 text-[clamp(19px,1.9vw,30px)] leading-[1.06] font-extrabold tracking-[-0.04em] text-balance uppercase">
+								{layer.claim}
+							</h3>
+						</div>
 
-						<p className="mt-3 text-sm text-pretty text-muted">{surface.body}</p>
-					</article>
+						<div className="lg:pt-1">
+							{/*
+							 * The chore, struck out — set in sans rather than the mono
+							 * used for labels. Mono uppercase under a strikethrough is
+							 * dense enough to stop being readable.
+							 */}
+							<p className="flex gap-2.5 text-sm text-muted/70">
+								<span aria-hidden>✕</span>
+								<s className="decoration-muted/50">{layer.chore}</s>
+							</p>
+
+							<p className="mt-3 max-w-xl text-sm text-pretty text-muted">
+								{layer.body}
+							</p>
+						</div>
+					</li>
 				))}
-			</div>
+			</ol>
 		</section>
 	);
 }
