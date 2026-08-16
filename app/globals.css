@@ -223,9 +223,14 @@ body {
 
 .fx-outline:hover,
 .fx-outline[data-active="true"],
-/* A disclosure fills its question while hovered, and stays filled once open. */
-summary:hover .fx-outline,
-details[open] .fx-outline {
+/*
+ * Also fill when the marker sits on an ancestor rather than the text itself —
+ * a hovered or open disclosure, or the active step in the workflow, where the
+ * control is the whole cell and the outlined word is only part of it.
+ */
+:is(summary, button):hover .fx-outline,
+details[open] .fx-outline,
+[data-active="true"] .fx-outline {
 	color: var(--foreground);
 	-webkit-text-stroke-color: transparent;
 }

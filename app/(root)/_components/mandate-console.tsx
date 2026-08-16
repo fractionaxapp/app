@@ -6,25 +6,47 @@ import { useEffect, useState } from "react";
  * The product, shown rather than described: one mandate in, a five-stage
  * workflow out. Auto-advances so the whole lifecycle is visible without
  * interaction, and stops for good once the visitor takes control themselves.
+ *
+ * Each stage draws what it actually does. Five metric lists made five very
+ * different jobs look identical — a funnel, a comparison, an eligibility
+ * sweep, a split and a schedule are not the same shape, so they are not drawn
+ * the same way. The figures are illustrative.
  */
 
-const STEP_DURATION_MS = 3800;
+const STEP_DURATION_MS = 4200;
 
 const MANDATE =
 	"Private credit yielding 8%+, minimum under $25K, Asia exposure, moderate risk.";
 
-const steps = [
+type Visual =
+	| { kind: "bars"; items: { label: string; value: string; ratio: number }[] }
+	| { kind: "matrix"; total: number; filled: number; caption: string }
+	| { kind: "rows"; head: string[]; items: { label: string; values: string[] }[] };
+
+type Step = {
+	id: string;
+	verb: string;
+	title: string;
+	description: string;
+	note: string;
+	visual: Visual;
+};
+
+const steps: Step[] = [
 	{
 		id: "discover",
 		verb: "Discover",
 		title: "Every tokenized offering, in one index",
 		description:
 			"167 issuance platforms crawled continuously and normalised into a single schema, so offerings that were never meant to be compared can be.",
-		metrics: [
-			{ label: "Offerings live", value: "1,284" },
-			{ label: "Match mandate", value: "37" },
-			{ label: "Elapsed", value: "4.1s" },
-		],
+		note: "Elapsed 4.1s",
+		visual: {
+			kind: "bars",
+			items: [
+				{ label: "Indexed", value: "1,284", ratio: 1 },
+				{ label: "Match your mandate", value: "37", ratio: 0.029 },
+			],
+		},
 	},
 	{
 		id: "underwrite",
@@ -32,11 +54,16 @@ const steps = [
 		title: "Every deal read the same way",
 		description:
 			"Offering memos, term sheets and payment histories parsed into one field set — so thirty-seven PDFs become thirty-seven comparable rows.",
-		metrics: [
-			{ label: "Median net yield", value: "8.4%" },
-			{ label: "Median DSCR", value: "1.62×" },
-			{ label: "Flags raised", value: "3" },
-		],
+		note: "3 flags raised",
+		visual: {
+			kind: "rows",
+			head: ["Net", "DSCR"],
+			items: [
+				{ label: "Receivables pool VII", values: ["9.2%", "1.8×"] },
+				{ label: "Jakarta logistics II", values: ["8.6%", "1.5×"] },
+				{ label: "SME bridge facility", values: ["8.1%", "1.6×"] },
+			],
+		},
 	},
 	{
 		id: "eligibility",
@@ -44,23 +71,29 @@ const steps = [
 		title: "Cleared once, not once per issuer",
 		description:
 			"Your identity, jurisdiction and accreditation resolved against each issuer's rules up front — before you fill in a single form.",
-		metrics: [
-			{ label: "Eligible", value: "21 / 37" },
-			{ label: "Re-verifications", value: "0" },
-			{ label: "Standing", value: "Accredited" },
-		],
+		note: "0 re-verifications",
+		visual: {
+			kind: "matrix",
+			total: 37,
+			filled: 21,
+			caption: "Eligible at 21 of 37 issuers",
+		},
 	},
 	{
 		id: "execute",
 		verb: "Execute",
 		title: "You approve. The agent settles",
 		description:
-			"Execution runs inside policy limits you set — size, venue, counterparty. The agent cannot step outside the mandate it was given.",
-		metrics: [
-			{ label: "Allocated", value: "$25,000" },
-			{ label: "Positions", value: "3" },
-			{ label: "Settlement", value: "34s" },
-		],
+			"Execution runs inside policy limits you set — size, venue and counterparty. The agent cannot step outside the mandate it was given.",
+		note: "Settled in 34s",
+		visual: {
+			kind: "bars",
+			items: [
+				{ label: "Receivables pool VII", value: "$10,000", ratio: 0.4 },
+				{ label: "Jakarta logistics II", value: "$8,000", ratio: 0.32 },
+				{ label: "SME bridge facility", value: "$7,000", ratio: 0.28 },
+			],
+		},
 	},
 	{
 		id: "monitor",
@@ -68,13 +101,112 @@ const steps = [
 		title: "The position keeps being watched",
 		description:
 			"Distributions, covenants and secondary marks tracked continuously by the same model that underwrote the deal in the first place.",
-		metrics: [
-			{ label: "Next coupon", value: "Sep 1" },
-			{ label: "Covenants", value: "Pass" },
-			{ label: "NAV, month to date", value: "+0.7%" },
-		],
+		note: "NAV +0.7% month to date",
+		visual: {
+			kind: "rows",
+			head: ["Due"],
+			items: [
+				{ label: "Coupon · Receivables VII", values: ["Sep 1"] },
+				{ label: "Covenant test · Jakarta II", values: ["Sep 30"] },
+				{ label: "Mark refresh · all positions", values: ["Daily"] },
+			],
+		},
 	},
 ];
+
+function Bars({ items }: { items: Extract<Visual, { kind: "bars" }>["items"] }) {
+	return (
+		<ul className="flex flex-col gap-5">
+			{items.map((item) => (
+				<li key={item.label}>
+					<div className="flex items-baseline justify-between gap-4">
+						<span className="fx-eyebrow text-muted">{item.label}</span>
+						<span className="font-mono text-lg tracking-tight text-accent tabular-nums">
+							{item.value}
+						</span>
+					</div>
+
+					<div className="mt-2.5 h-1.5 bg-border">
+						{/* A 3% bar is nearly invisible, which is the point of this one —
+						    min-width keeps it rendered rather than rounded away. */}
+						<div
+							className="h-full min-w-0.5 bg-accent"
+							style={{ width: `${item.ratio * 100}%` }}
+						/>
+					</div>
+				</li>
+			))}
+		</ul>
+	);
+}
+
+function Matrix({
+	total,
+	filled,
+	caption,
+}: Extract<Visual, { kind: "matrix" }>) {
+	return (
+		<div>
+			<ul
+				aria-hidden
+				className="flex flex-wrap gap-1.5"
+			>
+				{Array.from({ length: total }, (_, index) => (
+					<li
+						key={index}
+						className={`size-3.5 ${
+							index < filled ? "bg-accent" : "border border-border"
+						}`}
+					/>
+				))}
+			</ul>
+
+			<p className="fx-eyebrow mt-5 text-muted">{caption}</p>
+		</div>
+	);
+}
+
+function Rows({ head, items }: Extract<Visual, { kind: "rows" }>) {
+	return (
+		<table className="w-full border-collapse text-left">
+			<thead>
+				<tr>
+					<th className="fx-eyebrow pb-3 font-normal text-muted">Deal</th>
+					{head.map((column) => (
+						<th
+							key={column}
+							className="fx-eyebrow pb-3 text-right font-normal text-muted"
+						>
+							{column}
+						</th>
+					))}
+				</tr>
+			</thead>
+
+			<tbody>
+				{items.map((row) => (
+					<tr key={row.label} className="border-t border-border">
+						<td className="py-3 pr-4 text-sm">{row.label}</td>
+						{row.values.map((value) => (
+							<td
+								key={value}
+								className="py-3 text-right font-mono text-sm text-accent tabular-nums"
+							>
+								{value}
+							</td>
+						))}
+					</tr>
+				))}
+			</tbody>
+		</table>
+	);
+}
+
+function StageVisual({ visual }: { visual: Visual }) {
+	if (visual.kind === "bars") return <Bars items={visual.items} />;
+	if (visual.kind === "matrix") return <Matrix {...visual} />;
+	return <Rows {...visual} />;
+}
 
 export function MandateConsole() {
 	const [activeIndex, setActiveIndex] = useState(0);
@@ -117,10 +249,18 @@ export function MandateConsole() {
 				</p>
 			</div>
 
-			{/* The five stages as hollow type that fills when the agent reaches it. */}
-			<div className="border-b border-border">
-				<div className="flex flex-wrap items-baseline gap-x-6 gap-y-1 px-5 py-6 sm:gap-x-9">
-					{steps.map((step, index) => (
+			{/*
+			 * Five equal segments rather than a row of words over one long bar.
+			 * Each stage now owns its own rail, so completed, running and not
+			 * started are legible at a glance instead of inferred from one
+			 * bar's position.
+			 */}
+			<div className="grid gap-px border-b border-border bg-border sm:grid-cols-3 lg:grid-cols-5">
+				{steps.map((step, index) => {
+					const isActive = index === activeIndex;
+					const isDone = index < activeIndex;
+
+					return (
 						<button
 							key={step.id}
 							type="button"
@@ -128,34 +268,45 @@ export function MandateConsole() {
 								setActiveIndex(index);
 								setIsAuto(false);
 							}}
-							data-active={index === activeIndex}
-							aria-current={index === activeIndex ? "step" : undefined}
-							// Sized so all five verbs hold one line from tablet up.
-							className="fx-outline cursor-pointer text-[clamp(20px,2.6vw,42px)] leading-none font-extrabold tracking-[-0.05em] uppercase"
+							data-active={isActive}
+							aria-current={isActive ? "step" : undefined}
+							className="group flex cursor-pointer flex-col gap-3 bg-surface px-4 py-4 text-left transition-colors hover:bg-surface-muted"
 						>
-							{step.verb}
-						</button>
-					))}
-				</div>
+							<span
+								className={`fx-eyebrow tabular-nums ${
+									isActive || isDone ? "text-primary" : "text-muted"
+								}`}
+							>
+								{String(index + 1).padStart(2, "0")}
+							</span>
 
-				<div className="h-px bg-border">
-					{/* Keyed so advancing remounts it and the fill restarts. */}
-					<span
-						key={activeIndex}
-						className="fx-fill block h-px bg-primary"
-						style={
-							{ "--fx-duration": `${STEP_DURATION_MS}ms` } as React.CSSProperties
-						}
-					/>
-				</div>
+							<span className="fx-outline text-[clamp(17px,1.9vw,30px)] leading-none font-extrabold tracking-[-0.045em] uppercase">
+								{step.verb}
+							</span>
+
+							<span className="mt-auto block h-px bg-border">
+								{isDone ? <span className="block h-px bg-primary" /> : null}
+								{isActive ? (
+									// Keyed so advancing remounts it and the fill restarts.
+									<span
+										key={activeIndex}
+										className="fx-fill block h-px bg-primary"
+										style={
+											{
+												"--fx-duration": `${STEP_DURATION_MS}ms`,
+											} as React.CSSProperties
+										}
+									/>
+								) : null}
+							</span>
+						</button>
+					);
+				})}
 			</div>
 
-			<div className="grid gap-px bg-border lg:grid-cols-[1.1fr_1fr]">
+			<div className="grid gap-px bg-border lg:grid-cols-[0.9fr_1.1fr]">
 				<div className="bg-surface px-5 py-7">
-					<p className="fx-eyebrow text-accent tabular-nums">
-						{String(activeIndex + 1).padStart(2, "0")} / 05
-					</p>
-					<h3 className="mt-4 text-[clamp(20px,2vw,30px)] leading-[1.05] font-extrabold tracking-[-0.04em] text-balance uppercase">
+					<h3 className="text-[clamp(20px,2vw,30px)] leading-[1.05] font-extrabold tracking-[-0.04em] text-balance uppercase">
 						{active.title}
 					</h3>
 					<p className="mt-4 max-w-125 text-pretty text-muted">
@@ -163,19 +314,13 @@ export function MandateConsole() {
 					</p>
 				</div>
 
-				<dl className="grid gap-px bg-border sm:grid-cols-3 lg:grid-cols-1">
-					{active.metrics.map((metric) => (
-						<div
-							key={metric.label}
-							className="flex flex-col justify-center bg-surface px-5 py-5 lg:flex-row lg:items-baseline lg:justify-between lg:gap-4"
-						>
-							<dt className="fx-eyebrow text-muted">{metric.label}</dt>
-							<dd className="mt-2 font-mono text-xl tracking-tight text-foreground tabular-nums lg:mt-0">
-								{metric.value}
-							</dd>
-						</div>
-					))}
-				</dl>
+				<div className="flex flex-col justify-between gap-6 bg-surface px-5 py-7">
+					<StageVisual visual={active.visual} />
+
+					<p className="fx-eyebrow border-t border-border pt-4 text-muted">
+						{active.note}
+					</p>
+				</div>
 			</div>
 		</div>
 	);
