@@ -5,6 +5,7 @@ import { HowItWorks } from "./_components/how-it-works";
 import { MandateComposer } from "./_components/mandate-composer";
 import { Marquee } from "./_components/marquee";
 import { Platform } from "./_components/platform";
+import { Stats } from "./_components/stats";
 
 /*
  * Ordered by the questions a visitor actually asks, in the order they ask
@@ -21,6 +22,7 @@ export default function HomePage() {
 		<>
 			<Hero />
 			<Marquee />
+			<Stats />
 			<HowItWorks />
 			<Control />
 			<Platform />

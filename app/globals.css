@@ -136,7 +136,13 @@ body {
  * to pad their own cells to the same value to stay in the column.
  */
 :root {
-	--gutter: clamp(20px, 3.2vw, 68px);
+	/*
+	 * Grows with the viewport to 68px, then keeps growing — but only to hold
+	 * the content column at 1680px. Past that the 1fr/2fr/1fr tracks get wide
+	 * enough that copy stops filling them and the columns drift apart. The
+	 * rules still run to the screen edge; only the content is held.
+	 */
+	--gutter: max(clamp(20px, 3.2vw, 68px), calc((100vw - 1680px) / 2));
 }
 
 .fx-bleed {
@@ -169,7 +175,7 @@ body {
  * gets a headline sized for its width and no room left for anything under it.
  */
 .fx-display-fold {
-	font-size: clamp(36px, min(7.2vw, 10vh), 120px);
+	font-size: clamp(36px, min(7.2vw, 10vh), 150px);
 }
 
 .fx-heading {

@@ -159,7 +159,7 @@ export function ApprovalPanel() {
 
 	return (
 		<div className="border border-border bg-surface">
-			<div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b border-border px-5 py-2.5">
+			<div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b border-border px-5 py-3.5">
 				<p className="fx-eyebrow text-muted">
 					Example shortlist · 3 of 37 matches
 				</p>
@@ -175,7 +175,7 @@ export function ApprovalPanel() {
 
 			{/* Min height holds the panel steady as it moves between stages, so
 			    the fold below it does not jump. */}
-			<div className="min-h-38">
+			<div className="min-h-40">
 				{stage === "reviewing" ? (
 					<div className="flex snap-x snap-mandatory gap-px overflow-x-auto bg-border md:grid md:grid-cols-3 md:overflow-visible">
 						{deals.map((deal) => {
@@ -186,7 +186,7 @@ export function ApprovalPanel() {
 							return (
 								<div
 									key={deal.id}
-									className="flex min-w-[85%] shrink-0 snap-start flex-col gap-3.5 bg-surface px-5 py-4 md:min-w-0"
+									className="flex min-w-[85%] shrink-0 snap-start flex-col gap-4 bg-surface px-5 py-5 md:min-w-0"
 								>
 									<div>
 										<p className="fx-eyebrow text-muted">{deal.origin}</p>
@@ -243,7 +243,7 @@ export function ApprovalPanel() {
 				) : null}
 
 				{stage === "executing" ? (
-					<div className="flex min-h-38 flex-col justify-center gap-3.5 px-5 py-3.5">
+					<div className="flex min-h-40 flex-col justify-center gap-4 px-5 py-4">
 						<p className="text-[clamp(20px,2vw,30px)] leading-tight font-extrabold tracking-[-0.04em] uppercase">
 							Executing {approved}{" "}
 							{approved === 1 ? "approval" : "approvals"}
@@ -267,7 +267,7 @@ export function ApprovalPanel() {
 				{stage === "settled" ? (
 					/* The one light surface on the page. Completion reads as an
 					   inversion rather than as yet another dark card. */
-					<div className="flex min-h-38 flex-col justify-center gap-3.5 bg-popover px-5 py-3.5 text-popover-foreground">
+					<div className="flex min-h-40 flex-col justify-center gap-4 bg-popover px-5 py-4 text-popover-foreground">
 						{approved > 0 ? (
 							<>
 								<div className="flex flex-wrap items-baseline gap-x-6 gap-y-2">
