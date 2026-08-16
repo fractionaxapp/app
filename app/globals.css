@@ -251,6 +251,31 @@ details[open] .fx-outline,
 	animation: fx-reveal 0.35s ease both;
 }
 
+/*
+ * Scroll progress along the bottom of the header. Driven by the scroll
+ * position itself rather than a timer, so there is no listener and no
+ * per-frame work.
+ *
+ * Guarded: where scroll-driven animations are unsupported the declaration is
+ * skipped entirely and the rail stays at scaleX(0), rather than running as a
+ * time-based animation and filling on its own.
+ */
+@supports (animation-timeline: scroll()) {
+	@keyframes fx-progress {
+		from {
+			transform: scaleX(0);
+		}
+		to {
+			transform: scaleX(1);
+		}
+	}
+
+	.fx-progress {
+		animation: fx-progress linear;
+		animation-timeline: scroll(root block);
+	}
+}
+
 /* Continuous ticker. The track holds the list twice, so -50% loops seamlessly. */
 @keyframes fx-marquee {
 	from {

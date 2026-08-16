@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { TrackedLink } from "@/app/_components/tracked-link";
 
@@ -9,40 +9,110 @@ import { Wordmark } from "./logo";
 import { Arrow } from "./ui";
 
 const navigation = [
-	{ href: "/#workflow", label: "How it works" },
-	{ href: "/#control", label: "Control" },
-	{ href: "/#platform", label: "Underneath" },
-	{ href: "/#faq", label: "FAQ" },
+	{ id: "workflow", label: "How it works" },
+	{ id: "control", label: "Control" },
+	{ id: "platform", label: "Underneath" },
+	{ id: "faq", label: "FAQ" },
 ];
 
 export function SiteHeader() {
 	const [isOpen, setIsOpen] = useState(false);
+	const [activeId, setActiveId] = useState<string | null>(null);
+
+	/*
+	 * Marks the section you are currently in. The root margin collapses the
+	 * viewport to a band just under the header, so "current" means the section
+	 * crossing the top of the screen rather than whichever happens to occupy
+	 * the most pixels.
+	 */
+	useEffect(() => {
+		let frame = 0;
+
+		/*
+		 * The current section is the last one whose top has passed under the
+		 * header. Not "which section is visible" — sections abut exactly, so at
+		 * a boundary two of them qualify and picking by document order sticks on
+		 * the one you have already left.
+		 *
+		 * Deliberately not an IntersectionObserver. That reports changes rather
+		 * than state: a fragment jump fires it once mid-scroll and never again
+		 * at the final position, leaving the wrong section marked. Reading four
+		 * rects per animation frame, only while scrolling, is cheaper than being
+		 * wrong.
+		 */
+		const resolve = () => {
+			frame = 0;
+
+			let current: string | null = null;
+
+			for (const item of navigation) {
+				const element = document.getElementById(item.id);
+				if (element && element.getBoundingClientRect().top <= 57) {
+					current = item.id;
+				}
+			}
+
+			setActiveId(current);
+		};
+
+		const schedule = () => {
+			if (frame) return;
+			frame = window.requestAnimationFrame(resolve);
+		};
+
+		// Scheduled rather than called, so the first read happens after layout.
+		schedule();
+
+		window.addEventListener("scroll", schedule, { passive: true });
+		window.addEventListener("resize", schedule, { passive: true });
+
+		return () => {
+			if (frame) window.cancelAnimationFrame(frame);
+			window.removeEventListener("scroll", schedule);
+			window.removeEventListener("resize", schedule);
+		};
+	}, []);
 
 	return (
 		<header className="sticky top-0 z-50 border-b border-border bg-background/90 backdrop-blur">
 			{/* items-stretch, so every nav cell is a full-height division of the
 			    bar rather than a link floating inside it. */}
-			<div className="flex h-14 items-stretch justify-between">
+			<div className="relative flex h-14 items-stretch justify-between">
 				<Link
 					href="/"
 					aria-label="Fractionax home"
 					onClick={() => setIsOpen(false)}
-					className="fx-bleed flex items-center"
+					className="fx-bleed flex items-center md:border-r md:border-border"
 				>
 					<Wordmark />
 				</Link>
 
 				<div className="flex items-stretch">
 					<nav className="hidden items-stretch md:flex">
-						{navigation.map((item) => (
-							<Link
-								key={item.href}
-								href={item.href}
-								className="fx-eyebrow flex items-center border-l border-border px-4 text-[10px] text-muted transition-colors hover:bg-surface hover:text-foreground"
-							>
-								{item.label}
-							</Link>
-						))}
+						{navigation.map((item) => {
+							const isActive = activeId === item.id;
+
+							return (
+								<Link
+									key={item.id}
+									href={`/#${item.id}`}
+									aria-current={isActive ? "true" : undefined}
+									className={`fx-eyebrow flex items-center gap-2.5 border-l border-border px-4 text-[10px] transition-colors ${
+										isActive
+											? "bg-surface text-foreground"
+											: "text-muted hover:bg-surface hover:text-foreground"
+									}`}
+								>
+									<span
+										aria-hidden
+										className={`size-1 transition-colors ${
+											isActive ? "bg-primary" : "bg-transparent"
+										}`}
+									/>
+									{item.label}
+								</Link>
+							);
+						})}
 					</nav>
 
 					<TrackedLink
@@ -77,18 +147,33 @@ export function SiteHeader() {
 						</span>
 					</button>
 				</div>
+
+				{/* How far down the page you are. Pure CSS — see globals. */}
+				<span
+					aria-hidden
+					className="fx-progress absolute inset-x-0 bottom-0 h-px origin-left scale-x-0 bg-primary"
+				/>
 			</div>
 
 			{isOpen ? (
 				<nav id="site-nav-mobile" className="border-t border-border md:hidden">
-					{navigation.map((item) => (
+					{navigation.map((item, index) => (
 						<Link
-							key={item.href}
-							href={item.href}
+							key={item.id}
+							href={`/#${item.id}`}
 							onClick={() => setIsOpen(false)}
-							className="fx-bleed fx-eyebrow flex items-center border-b border-border py-4 text-muted"
+							className="fx-bleed flex items-baseline gap-4 border-b border-border py-4"
 						>
-							{item.label}
+							<span className="fx-eyebrow text-accent tabular-nums">
+								{String(index + 1).padStart(2, "0")}
+							</span>
+							<span
+								className={
+									activeId === item.id ? "text-foreground" : "text-muted"
+								}
+							>
+								{item.label}
+							</span>
 						</Link>
 					))}
 
