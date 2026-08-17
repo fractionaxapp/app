@@ -2,7 +2,9 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
 import { ExecutionChecks } from "../_components/execution-checks";
+import { ExecutionLimits } from "../_components/execution-limits";
 import { ExecutionPolicy } from "../_components/execution-policy";
+import { ExecutionSequence } from "../_components/execution-sequence";
 import { StagePage } from "../_components/stage-page";
 import { stageBySlug } from "../_components/stages";
 
@@ -22,6 +24,8 @@ export default function ExecutePage() {
 		<StagePage stage={stage}>
 			<ExecutionPolicy />
 			<ExecutionChecks />
+			<ExecutionSequence />
+			<ExecutionLimits />
 		</StagePage>
 	);
 }
