@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { SectionHeading } from "./ui";
 
@@ -68,6 +68,89 @@ function Item({
 
 export function Control() {
 	const [unattended, setUnattended] = useState(false);
+	const lists = useRef<HTMLDivElement>(null);
+	const hasChosen = useRef(false);
+	/** Mirrors `unattended` so the scroll handler never reads a stale closure. */
+	const isOn = useRef(false);
+	/** Height of the lists in the off state — see the note in the effect. */
+	const restHeight = useRef(0);
+
+	const apply = (value: boolean) => {
+		isOn.current = value;
+		setUnattended(value);
+	};
+
+	/*
+	 * The section works its own toggle as you scroll through it: reach the end
+	 * of both lists and approval is handed over, scroll back off them and it is
+	 * taken back. A control nobody realises is a control never shows what it
+	 * does, and moving it in both directions makes it obvious it is a switch
+	 * rather than a one-time reveal.
+	 *
+	 * Keyed to the bottom of the lists, not the top of the panel: the point of
+	 * the flip is watching a capability cross between the columns, which is
+	 * worth nothing if it happens below the fold. Waiting until the last row
+	 * has been on screen means the change is always something you witness.
+	 *
+	 * Derived from position rather than scroll direction, so the state is a
+	 * pure function of where the lists sit — correct after a fragment jump or a
+	 * resize, not only after a gesture.
+	 *
+	 * Measured against a frozen height rather than the live one. Turning on
+	 * inserts the caution row and a list item, which grow this very element by
+	 * ~90px and so move the edge being tested. Left alone that forces a dead
+	 * zone wide enough to swallow the shift, which is what made the change fire
+	 * early going down and revert late coming back up. Holding the rest-state
+	 * height keeps the trigger line still, so the band can be narrow and the
+	 * two directions can sit close together.
+	 *
+	 * hasChosen ends all of this the moment the visitor touches the toggle
+	 * themselves. Their choice outranks the demonstration.
+	 */
+	useEffect(() => {
+		// Self-driving UI is exactly what this preference asks us not to do.
+		if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
+		let frame = 0;
+
+		const resolve = () => {
+			frame = 0;
+
+			const element = lists.current;
+			if (!element || hasChosen.current) return;
+
+			// Only trustworthy while off; re-taken whenever it returns to rest.
+			if (!isOn.current) restHeight.current = element.offsetHeight;
+
+			const fold = window.innerHeight;
+			const edge = element.getBoundingClientRect().top + restHeight.current;
+
+			if (edge <= fold * 0.82) apply(true);
+			else if (edge >= fold * 0.94) apply(false);
+		};
+
+		const schedule = () => {
+			if (frame) return;
+			frame = window.requestAnimationFrame(resolve);
+		};
+
+		// Scheduled rather than called, so the first read happens after layout.
+		schedule();
+
+		window.addEventListener("scroll", schedule, { passive: true });
+		window.addEventListener("resize", schedule, { passive: true });
+
+		return () => {
+			if (frame) window.cancelAnimationFrame(frame);
+			window.removeEventListener("scroll", schedule);
+			window.removeEventListener("resize", schedule);
+		};
+	}, []);
+
+	const choose = (value: boolean) => {
+		hasChosen.current = true;
+		apply(value);
+	};
 
 	return (
 		<section id="control" className="fx-section fx-bleed scroll-mt-14 bg-surface">
@@ -99,7 +182,7 @@ export function Control() {
 								<button
 									key={option.label}
 									type="button"
-									onClick={() => setUnattended(option.value)}
+									onClick={() => choose(option.value)}
 									aria-pressed={unattended === option.value}
 									className={`fx-eyebrow cursor-pointer px-3.5 py-2.5 font-semibold transition-colors ${
 										unattended === option.value
@@ -147,7 +230,10 @@ export function Control() {
 					</p>
 				) : null}
 
-				<div className="grid gap-px border-t border-border bg-border lg:grid-cols-2">
+				<div
+					ref={lists}
+					className="grid gap-px border-t border-border bg-border lg:grid-cols-2"
+				>
 					<div className="bg-surface p-6 sm:p-8">
 						<h3 className="text-[clamp(19px,1.9vw,28px)] leading-tight font-extrabold tracking-[-0.04em] uppercase">
 							Runs on its own
