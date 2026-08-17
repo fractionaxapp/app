@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
+import { DiscoveryFunnel } from "../_components/discovery-funnel";
+import { DiscoverySchema } from "../_components/discovery-schema";
 import { StagePage } from "../_components/stage-page";
 import { stageBySlug } from "../_components/stages";
 
@@ -15,5 +17,11 @@ export const metadata: Metadata = {
 
 export default function DiscoverPage() {
 	if (!stage) notFound();
-	return <StagePage stage={stage} />;
+
+	return (
+		<StagePage stage={stage}>
+			<DiscoveryFunnel />
+			<DiscoverySchema />
+		</StagePage>
+	);
 }
