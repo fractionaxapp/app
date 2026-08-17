@@ -3,6 +3,8 @@ import { notFound } from "next/navigation";
 
 import { StagePage } from "../_components/stage-page";
 import { stageBySlug } from "../_components/stages";
+import { UnderwritingExtract } from "../_components/underwriting-extract";
+import { UnderwritingTable } from "../_components/underwriting-table";
 
 const stage = stageBySlug("underwrite");
 
@@ -15,5 +17,11 @@ export const metadata: Metadata = {
 
 export default function UnderwritePage() {
 	if (!stage) notFound();
-	return <StagePage stage={stage} />;
+
+	return (
+		<StagePage stage={stage}>
+			<UnderwritingExtract />
+			<UnderwritingTable />
+		</StagePage>
+	);
 }

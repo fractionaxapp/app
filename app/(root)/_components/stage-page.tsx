@@ -14,7 +14,14 @@ import { Arrow, actionClass } from "./ui";
  * the current stage solid, the others hollow — so a page reached directly still
  * shows where it sits in the sequence.
  */
-export function StagePage({ stage }: { stage: Stage }) {
+export function StagePage({
+	stage,
+	children,
+}: {
+	stage: Stage;
+	/** Bespoke sections for this stage, placed after "How it works". */
+	children?: React.ReactNode;
+}) {
 	const index = stages.findIndex((item) => item.slug === stage.slug);
 	const next = nextStage(stage.slug);
 
@@ -133,6 +140,8 @@ export function StagePage({ stage }: { stage: Stage }) {
 					</ol>
 				</div>
 			</section>
+
+			{children}
 
 			<section className="fx-section fx-bleed bg-surface">
 				<div className="grid gap-x-8 gap-y-10 lg:grid-cols-[1fr_2fr_1fr]">
