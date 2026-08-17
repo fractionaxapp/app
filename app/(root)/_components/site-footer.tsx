@@ -2,20 +2,24 @@ import Link from "next/link";
 
 import { LogoMark } from "@/app/_components/logo";
 
+import { stages } from "./stages";
+
 /* Every link here resolves to a real destination. */
 const groups = [
 	{
-		heading: "Product",
+		heading: "Workflow",
+		links: stages.map((stage) => ({
+			href: `/${stage.slug}`,
+			label: stage.label,
+		})),
+	},
+	{
+		// The home-page sections that are no longer in the header nav.
+		heading: "More",
 		links: [
-			{ href: "/#workflow", label: "How it works" },
 			{ href: "/#control", label: "Control" },
 			{ href: "/#platform", label: "Underneath" },
 			{ href: "/#faq", label: "Questions" },
-		],
-	},
-	{
-		heading: "Access",
-		links: [
 			{ href: "/#start", label: "Compose a mandate" },
 			{ href: "/dashboard", label: "Join the private beta" },
 		],

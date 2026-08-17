@@ -1,77 +1,25 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
-
-import { TrackedLink } from "@/app/_components/tracked-link";
+import { usePathname } from "next/navigation";
+import { useState } from "react";
 
 import { Wordmark } from "@/app/_components/logo";
+import { TrackedLink } from "@/app/_components/tracked-link";
+
+import { stages } from "./stages";
 import { Arrow } from "./ui";
 
-const navigation = [
-	{ id: "workflow", label: "How it works" },
-	{ id: "control", label: "Control" },
-	{ id: "platform", label: "Underneath" },
-	{ id: "faq", label: "FAQ" },
-];
-
+/*
+ * The nav is the workflow: one item per stage, each its own page.
+ *
+ * It used to track sections on the home page with a scroll listener. Now that
+ * every item is a route, the current item is just the current path — which is
+ * both simpler and correct on a page reached directly from search.
+ */
 export function SiteHeader() {
 	const [isOpen, setIsOpen] = useState(false);
-	const [activeId, setActiveId] = useState<string | null>(null);
-
-	/*
-	 * Marks the section you are currently in. The root margin collapses the
-	 * viewport to a band just under the header, so "current" means the section
-	 * crossing the top of the screen rather than whichever happens to occupy
-	 * the most pixels.
-	 */
-	useEffect(() => {
-		let frame = 0;
-
-		/*
-		 * The current section is the last one whose top has passed under the
-		 * header. Not "which section is visible" — sections abut exactly, so at
-		 * a boundary two of them qualify and picking by document order sticks on
-		 * the one you have already left.
-		 *
-		 * Deliberately not an IntersectionObserver. That reports changes rather
-		 * than state: a fragment jump fires it once mid-scroll and never again
-		 * at the final position, leaving the wrong section marked. Reading four
-		 * rects per animation frame, only while scrolling, is cheaper than being
-		 * wrong.
-		 */
-		const resolve = () => {
-			frame = 0;
-
-			let current: string | null = null;
-
-			for (const item of navigation) {
-				const element = document.getElementById(item.id);
-				if (element && element.getBoundingClientRect().top <= 57) {
-					current = item.id;
-				}
-			}
-
-			setActiveId(current);
-		};
-
-		const schedule = () => {
-			if (frame) return;
-			frame = window.requestAnimationFrame(resolve);
-		};
-
-		// Scheduled rather than called, so the first read happens after layout.
-		schedule();
-
-		window.addEventListener("scroll", schedule, { passive: true });
-		window.addEventListener("resize", schedule, { passive: true });
-
-		return () => {
-			if (frame) window.cancelAnimationFrame(frame);
-			window.removeEventListener("scroll", schedule);
-			window.removeEventListener("resize", schedule);
-		};
-	}, []);
+	const pathname = usePathname();
 
 	return (
 		<header className="sticky top-0 z-50 border-b border-border bg-background/90 backdrop-blur">
@@ -89,14 +37,15 @@ export function SiteHeader() {
 
 				<div className="flex items-stretch">
 					<nav className="hidden items-stretch md:flex">
-						{navigation.map((item) => {
-							const isActive = activeId === item.id;
+						{stages.map((stage) => {
+							const href = `/${stage.slug}`;
+							const isActive = pathname === href;
 
 							return (
 								<Link
-									key={item.id}
-									href={`/#${item.id}`}
-									aria-current={isActive ? "true" : undefined}
+									key={stage.slug}
+									href={href}
+									aria-current={isActive ? "page" : undefined}
 									className={`fx-eyebrow flex items-center gap-2.5 border-l border-border px-4 text-[10px] transition-colors ${
 										isActive
 											? "bg-surface text-foreground"
@@ -109,7 +58,7 @@ export function SiteHeader() {
 											isActive ? "bg-primary" : "bg-transparent"
 										}`}
 									/>
-									{item.label}
+									{stage.label}
 								</Link>
 							);
 						})}
@@ -157,25 +106,29 @@ export function SiteHeader() {
 
 			{isOpen ? (
 				<nav id="site-nav-mobile" className="border-t border-border md:hidden">
-					{navigation.map((item, index) => (
-						<Link
-							key={item.id}
-							href={`/#${item.id}`}
-							onClick={() => setIsOpen(false)}
-							className="fx-bleed flex items-baseline gap-4 border-b border-border py-4"
-						>
-							<span className="fx-eyebrow text-accent tabular-nums">
-								{String(index + 1).padStart(2, "0")}
-							</span>
-							<span
-								className={
-									activeId === item.id ? "text-foreground" : "text-muted"
-								}
+					{stages.map((stage, index) => {
+						const href = `/${stage.slug}`;
+
+						return (
+							<Link
+								key={stage.slug}
+								href={href}
+								onClick={() => setIsOpen(false)}
+								className="fx-bleed flex items-baseline gap-4 border-b border-border py-4"
 							>
-								{item.label}
-							</span>
-						</Link>
-					))}
+								<span className="fx-eyebrow text-accent tabular-nums">
+									{String(index + 1).padStart(2, "0")}
+								</span>
+								<span
+									className={
+										pathname === href ? "text-foreground" : "text-muted"
+									}
+								>
+									{stage.label}
+								</span>
+							</Link>
+						);
+					})}
 
 					<TrackedLink
 						href="/dashboard"

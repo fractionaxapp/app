@@ -9,6 +9,10 @@ import { absoluteUrl } from "@/lib/site";
  */
 const routes = [
 	{ path: "/", changeFrequency: "monthly", priority: 1 },
+	{ path: "/discover", changeFrequency: "monthly", priority: 0.8 },
+	{ path: "/underwrite", changeFrequency: "monthly", priority: 0.8 },
+	{ path: "/execute", changeFrequency: "monthly", priority: 0.8 },
+	{ path: "/monitor", changeFrequency: "monthly", priority: 0.8 },
 	{ path: "/privacy", changeFrequency: "yearly", priority: 0.3 },
 	{ path: "/terms", changeFrequency: "yearly", priority: 0.3 },
 	{ path: "/disclosures", changeFrequency: "yearly", priority: 0.3 },
