@@ -22,28 +22,28 @@ export default async function DashboardPage() {
 
 	return (
 		<div className="mx-auto flex w-full max-w-5xl flex-col gap-6">
-			<section className="grid gap-4 sm:grid-cols-3">
+			<section className="grid gap-px border border-border bg-border sm:grid-cols-3">
 				{metrics.map((metric) => (
-					<article
-						key={metric.label}
-						className="rounded-lg border border-border bg-surface p-5"
-					>
-						<p className="text-muted">{metric.label}</p>
-						<p className="mt-2 text-2xl font-semibold tracking-tight">
+					<article key={metric.label} className="bg-surface px-5 py-6">
+						<p className="fx-eyebrow text-muted">{metric.label}</p>
+						<p className="mt-3 font-mono text-3xl leading-none font-medium tracking-tight text-accent tabular-nums">
 							{metric.value}
 						</p>
-						<p className="mt-1 text-xs text-muted">{metric.hint}</p>
+						<p className="mt-3 text-xs text-muted">{metric.hint}</p>
 					</article>
 				))}
 			</section>
 
-			<section className="rounded-lg border border-border bg-surface p-6">
-				<h2 className="font-medium">
-					{user?.email?.address
-						? `Signed in as ${user.email.address}`
-						: "Overview"}
-				</h2>
-				<p className="mt-2 max-w-prose text-muted">
+			<section className="border border-border bg-surface">
+				<div className="border-b border-border px-5 py-3.5">
+					<p className="fx-eyebrow text-muted">
+						{user?.email?.address
+							? `Signed in as ${user.email.address}`
+							: "Overview"}
+					</p>
+				</div>
+
+				<p className="max-w-prose px-5 py-6 text-pretty text-muted">
 					This route lives in the (app) group. Add sibling routes beside it and
 					they inherit the sidebar and topbar automatically, without touching
 					the marketing layout.

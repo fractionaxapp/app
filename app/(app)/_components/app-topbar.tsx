@@ -16,28 +16,32 @@ export function AppTopbar() {
 	const { isEnabled, user, signOut } = useAuth();
 
 	return (
-		<header className="flex h-14 shrink-0 items-center justify-between border-b border-border bg-surface px-6">
-			<h1 className="font-medium">{titleForPathname(pathname)}</h1>
+		<header className="flex h-14 shrink-0 items-stretch justify-between border-b border-border bg-surface">
+			<h1 className="flex items-center px-6 text-sm font-extrabold tracking-[-0.02em] uppercase">
+				{titleForPathname(pathname)}
+			</h1>
 
 			{/* Account controls are meaningless without auth configured. */}
 			{isEnabled ? (
-				<div className="flex items-center gap-3">
+				<div className="flex items-stretch">
 					{user?.email ? (
-						<span className="hidden text-muted sm:inline">{user.email}</span>
+						<span className="hidden items-center border-l border-border px-4 font-mono text-xs text-muted sm:flex">
+							{user.email}
+						</span>
 					) : null}
 
-					<div
+					<span
 						aria-label="Account"
 						title={user?.email ?? undefined}
-						className="flex size-8 items-center justify-center rounded-full bg-surface-muted text-xs font-medium"
+						className="fx-eyebrow flex w-14 items-center justify-center border-l border-border text-primary"
 					>
 						{initialsFor(user?.email ?? null)}
-					</div>
+					</span>
 
 					<button
 						type="button"
 						onClick={signOut}
-						className="rounded-md px-2 py-1 text-muted transition-colors hover:bg-surface-muted hover:text-foreground"
+						className="fx-eyebrow cursor-pointer border-l border-border px-5 text-muted transition-colors hover:bg-surface-muted hover:text-foreground"
 					>
 						Sign out
 					</button>

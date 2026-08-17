@@ -25,7 +25,7 @@ export default function AppLayout({
 		<WalletProvider>
 			<UserSync />
 
-			<div className="ds-app flex min-h-full flex-1 flex-col bg-surface-muted text-foreground">
+			<div className="ds-app flex min-h-full flex-1 flex-col bg-background text-foreground">
 				{/* Chrome only appears once signed in; the gate renders the
 				    sign-in screen in its place otherwise. */}
 				<AuthGate>

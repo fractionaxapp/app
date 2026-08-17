@@ -47,7 +47,7 @@ export default function GlobalError({
 					<button
 						type="button"
 						onClick={() => unstable_retry()}
-						className="inline-flex h-11 items-center justify-center rounded-full bg-accent px-6 text-sm font-medium text-accent-foreground transition-opacity hover:opacity-90"
+						className="fx-eyebrow inline-flex min-h-13 items-center justify-center gap-4 bg-primary px-6 font-semibold text-primary-foreground transition-opacity hover:opacity-85"
 					>
 						Try again
 					</button>

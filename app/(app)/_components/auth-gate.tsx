@@ -33,23 +33,34 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
 
 	if (!isAuthenticated) {
 		return (
-			<div className="flex flex-1 flex-col items-center justify-center gap-6 px-6 py-24 text-center">
-				<div className="flex flex-col gap-3">
-					<h1 className="text-2xl font-semibold tracking-tight">
-						Sign in to continue
-					</h1>
-					<p className="max-w-sm text-muted">
-						Use your email, a Google account, or connect an existing wallet.
-					</p>
-				</div>
+			<div className="flex flex-1 items-center justify-center px-6 py-24">
+				<div className="w-full max-w-md border border-border bg-surface">
+					<div className="flex items-center justify-between gap-4 border-b border-border px-5 py-3.5">
+						<p className="fx-eyebrow text-muted">Fractionax</p>
+						<p className="fx-eyebrow flex items-center gap-2.5 text-primary">
+							<span aria-hidden className="size-1.5 bg-primary" />
+							Private beta
+						</p>
+					</div>
 
-				<button
-					type="button"
-					onClick={signIn}
-					className="inline-flex h-11 items-center justify-center rounded-full bg-accent px-6 text-sm font-medium text-accent-foreground transition-opacity hover:opacity-90"
-				>
-					Sign in
-				</button>
+					<div className="px-5 py-8">
+						<h1 className="text-[clamp(24px,3vw,34px)] leading-[1.05] font-extrabold tracking-[-0.04em] uppercase">
+							Sign in to continue
+						</h1>
+						<p className="mt-4 text-pretty text-muted">
+							Use your email, a Google account, or connect an existing wallet.
+						</p>
+					</div>
+
+					<button
+						type="button"
+						onClick={signIn}
+						className="fx-eyebrow flex min-h-13 w-full cursor-pointer items-center justify-between gap-4 border-t border-border bg-primary px-5 font-semibold text-primary-foreground transition-opacity hover:opacity-85"
+					>
+						Sign in
+						<span aria-hidden>→</span>
+					</button>
+				</div>
 			</div>
 		);
 	}

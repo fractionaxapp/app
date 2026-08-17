@@ -36,10 +36,9 @@ export const siteConfig = {
 	/** Handle without the URL, e.g. "@app". Leave empty to omit the tag. */
 	twitterHandle: "",
 	colors: {
-		// The marketing surface is committed dark in both schemes, so the
-		// browser chrome should be too — see .ds-web in app/globals.css.
-		light: "#050505",
-		dark: "#050505",
+		// Committed dark in both schemes, so the browser chrome matches either way.
+		light: "#191919",
+		dark: "#191919",
 	},
 } as const;
 

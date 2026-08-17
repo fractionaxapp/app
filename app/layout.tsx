@@ -86,9 +86,8 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
 	width: "device-width",
 	initialScale: 1,
-	// Tells the browser both schemes are supported, so form controls and
-	// scrollbars follow the active one.
-	colorScheme: "light dark",
+	// One committed scheme, so form controls and scrollbars follow it.
+	colorScheme: "dark",
 	themeColor: [
 		{ media: "(prefers-color-scheme: light)", color: siteConfig.colors.light },
 		{ media: "(prefers-color-scheme: dark)", color: siteConfig.colors.dark },

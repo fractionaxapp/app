@@ -1,42 +1,16 @@
 @import "tailwindcss";
 
-/* Shared design tokens — both route groups draw from the same scale. */
-:root {
-	--background: #ffffff;
-	--foreground: #171717;
-	--surface: #ffffff;
-	--surface-muted: #f4f4f5;
-	--border: #e4e4e7;
-	--muted: #71717a;
-	--accent: #171717;
-	--accent-foreground: #fafafa;
-}
-
-@media (prefers-color-scheme: dark) {
-	:root {
-		--background: #0a0a0a;
-		--foreground: #ededed;
-		--surface: #111111;
-		--surface-muted: #18181b;
-		--border: #27272a;
-		--muted: #a1a1aa;
-		--accent: #fafafa;
-		--accent-foreground: #0a0a0a;
-	}
-}
-
 /*
- * Fractionax brand palette, scoped to the marketing surface.
+ * Fractionax palette. One scale for the whole product.
  *
  * Committed dark: the brand reads as an institutional terminal, not a
- * themeable page, so these deliberately ignore prefers-color-scheme. The
- * product surface under (app) keeps the adaptive tokens above untouched.
+ * themeable page, so there is no light counterpart and no prefers-color-scheme
+ * branch. It sits on :root rather than a scope, so error and not-found
+ * boundaries outside both route groups inherit it too.
  *
- * body is matched too, via :has(), because it sits outside .ds-web — without
- * it, overscroll and the area behind a short page flash the light background.
+ * .ds-web and .ds-app differ in density, not colour — see the scopes below.
  */
-.ds-web,
-body:has(.ds-web) {
+:root {
 	color-scheme: dark;
 
 	--background: #191919;
@@ -65,8 +39,6 @@ body:has(.ds-web) {
 	--accent-foreground: #191919;
 
 	/*
-	 * Brand-only, no counterpart in the product scale.
-	 *
 	 * popover is the one light surface here: it carries the moment a flow
 	 * finishes, so completion reads as an inversion rather than another card.
 	 * danger is lifted from #d95448, which only reached 4.45:1 on this ground.
