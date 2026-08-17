@@ -1,6 +1,5 @@
-import Link from "next/link";
-
-import { Arrow, SectionHeading } from "./ui";
+import { ContactRow } from "./contact-row";
+import { SectionHeading } from "./ui";
 
 /*
  * The section a landing page has and a deck does not.
@@ -199,23 +198,12 @@ export function Faq() {
 				))}
 			</div>
 
-			{/* An exit to the CTA rather than a dead end at the last answer. */}
-			<Link
-				href="/#start"
-				className={`${ROW} group items-baseline border-b border-border py-6 transition-colors hover:bg-surface-muted`}
-			>
-				<span className="fx-eyebrow text-muted tabular-nums">··</span>
-
-				<span
-					className={`${QUESTION_TYPE} text-muted transition-colors group-hover:text-foreground`}
-				>
-					Something else?
-				</span>
-
-				<span className="justify-self-end text-primary">
-					<Arrow className="size-4" />
-				</span>
-			</Link>
+			{/*
+			 * An exit rather than a dead end at the last answer. Opens a dialog
+			 * for the question we did not answer, which is the more useful thing
+			 * to offer here than another jump down the page.
+			 */}
+			<ContactRow row={ROW} questionType={QUESTION_TYPE} />
 		</section>
 	);
 }

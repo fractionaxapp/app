@@ -14,7 +14,7 @@ be present in the environment *at build time*.
 
 | Variable | Needed at | Notes |
 | --- | --- | --- |
-| `NEXT_PUBLIC_SITE_URL` | **build** | Canonical URLs, OG images, sitemap, robots |
+| `NEXT_PUBLIC_SITE_URL` | **build** | `https://fractionax.app` in production. Canonical URLs, OG images, sitemap, robots |
 | `NEXT_PUBLIC_PRIVY_APP_ID` | **build** | An invalid value **fails the build** — Privy validates the format while prerendering `/dashboard` |
 | `NEXT_PUBLIC_PRIVY_CLIENT_ID` | **build** | |
 | `NEXT_PUBLIC_GA_ID` | **build** | Unset disables analytics entirely |
@@ -74,8 +74,9 @@ your-domain.com {
 }
 ```
 
-Then bind the app to localhost only, and set `NEXT_PUBLIC_SITE_URL` to the
-public HTTPS origin so canonical URLs, OG images and the sitemap are correct.
+Then bind the app to localhost only, and set `NEXT_PUBLIC_SITE_URL` to
+`https://fractionax.app` so canonical URLs, OG images and the sitemap are
+correct. It is read at build time, so changing it means rebuilding.
 
 Make sure the proxy forwards `X-Forwarded-For`; `/api/auth/sync` reads it to
 record the client IP on login events, and both Caddy and nginx's
