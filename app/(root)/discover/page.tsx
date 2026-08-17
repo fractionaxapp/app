@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
+import { DiscoveryCoverage } from "../_components/discovery-coverage";
 import { DiscoveryFunnel } from "../_components/discovery-funnel";
+import { DiscoveryGaps } from "../_components/discovery-gaps";
 import { DiscoverySchema } from "../_components/discovery-schema";
 import { StagePage } from "../_components/stage-page";
 import { stageBySlug } from "../_components/stages";
@@ -20,8 +22,10 @@ export default function DiscoverPage() {
 
 	return (
 		<StagePage stage={stage}>
+			<DiscoveryCoverage />
 			<DiscoveryFunnel />
 			<DiscoverySchema />
+			<DiscoveryGaps />
 		</StagePage>
 	);
 }
