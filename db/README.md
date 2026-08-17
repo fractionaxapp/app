@@ -19,18 +19,69 @@ Migrations live in `db/migrations/` and are applied in filename order by
 
 ## Droplet setup
 
-These steps are run once on the DigitalOcean droplet. Nothing in the app
-provisions infrastructure.
+Run once on the DigitalOcean droplet. Nothing in the app provisions
+infrastructure. Each step prints something you can check before moving on.
 
 ```bash
-# On the droplet
+# 1 — Install, and confirm the server is up
 sudo apt update && sudo apt install -y postgresql
-sudo -u postgres psql -c "CREATE DATABASE app;"
-sudo -u postgres psql -c "CREATE USER app_user WITH PASSWORD 'CHANGE_ME';"
-sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE app TO app_user;"
-# The migration needs to create extensions and tables in the public schema:
-sudo -u postgres psql -d app -c "GRANT ALL ON SCHEMA public TO app_user;"
+sudo systemctl enable --now postgresql
+sudo -u postgres psql -tAc "select version();"
+
+# 2 — Generate the password. Hex, so it needs no escaping inside a URL.
+#     Leading space keeps it out of shell history on most shells.
+ DB_PASS="$(openssl rand -hex 32)"
+
+# 3 — Role and database. The app user OWNS the database, which is what lets
+#     the migration create tables without any further grants.
+sudo -u postgres psql <<SQL
+CREATE ROLE app_user LOGIN PASSWORD '${DB_PASS}';
+CREATE DATABASE app OWNER app_user;
+SQL
+
+# 4 — pgcrypto, created by the superuser. The migration asks for it (gen_random_uuid).
+#     It is a trusted extension from PG13 on, but creating it here removes the
+#     question entirely on older servers.
+sudo -u postgres psql -d app -c "CREATE EXTENSION IF NOT EXISTS pgcrypto;"
+
+# 5 — Prove the app user can connect and create, before the app depends on it
+PGPASSWORD="$DB_PASS" psql -h 127.0.0.1 -U app_user -d app -tAc \
+  "create table _probe(x int); drop table _probe; select 'app_user ok';"
+
+# 6 — Point the app at it. DATABASE_URL is read at RUNTIME, so this needs a
+#     restart but not a rebuild.
+cd /srv/app                                   # wherever the app is deployed
+grep -c '^DATABASE_URL=' .env.local || true   # 0 means safe to append
+printf 'DATABASE_URL=postgres://app_user:%s@127.0.0.1:5432/app\n' "$DB_PASS" >> .env.local
+
+# 7 — Create the tables
+npm run db:migrate        # expect: Applied 0001_users.sql, 0002_access.sql
+
+# 8 — Restart and watch it come up clean
+pm2 restart app && pm2 logs app --lines 20 --nostream
+
+ unset DB_PASS
 ```
+
+If step 6 printed `1` rather than `0`, there is already a `DATABASE_URL` line —
+edit it in place instead of appending, or the second one wins and you will spend
+an hour wondering why.
+
+### Confirm it works end to end
+
+The sync endpoint answers `401` to an unauthenticated request whether or not the
+database is reachable — the authentication check deliberately runs first, so it
+leaks nothing about how the backend is provisioned. That makes `curl` useless
+here. Sign in on the site instead, then look for the row:
+
+```bash
+sudo -u postgres psql -d app -c \
+  "SELECT email, access_status, created_at FROM users ORDER BY created_at DESC LIMIT 5;"
+```
+
+A row means Privy, the sync endpoint and Postgres are all talking. No row means
+the login never reached the database — check `pm2 logs app` for
+`Failed to mirror Privy user into Postgres`.
 
 ### Do not expose Postgres to the internet
 
@@ -42,11 +93,8 @@ app over one of:
 - an **SSH tunnel** for local development:
   `ssh -L 5432:localhost:5432 user@droplet`.
 
-Then set in `.env.local`:
-
-```
-DATABASE_URL=postgres://app_user:CHANGE_ME@localhost:5432/app
-```
+Step 6 above writes the localhost form. Over a VPC, swap the host for the
+database server's private address.
 
 `DATABASE_SSL` stays unset for a plaintext connection over a private network or
 tunnel. Once you terminate TLS on Postgres itself, set `DATABASE_SSL=true`, and
