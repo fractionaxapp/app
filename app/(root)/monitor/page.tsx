@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
+import { MonitorDrift } from "../_components/monitor-drift";
+import { MonitorLedger } from "../_components/monitor-ledger";
 import { StagePage } from "../_components/stage-page";
 import { stageBySlug } from "../_components/stages";
 
@@ -15,5 +17,11 @@ export const metadata: Metadata = {
 
 export default function MonitorPage() {
 	if (!stage) notFound();
-	return <StagePage stage={stage} />;
+
+	return (
+		<StagePage stage={stage}>
+			<MonitorLedger />
+			<MonitorDrift />
+		</StagePage>
+	);
 }
