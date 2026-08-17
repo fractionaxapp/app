@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
+import { ExecutionChecks } from "../_components/execution-checks";
+import { ExecutionPolicy } from "../_components/execution-policy";
 import { StagePage } from "../_components/stage-page";
 import { stageBySlug } from "../_components/stages";
 
@@ -15,5 +17,11 @@ export const metadata: Metadata = {
 
 export default function ExecutePage() {
 	if (!stage) notFound();
-	return <StagePage stage={stage} />;
+
+	return (
+		<StagePage stage={stage}>
+			<ExecutionPolicy />
+			<ExecutionChecks />
+		</StagePage>
+	);
 }
