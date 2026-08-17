@@ -60,11 +60,18 @@ export function Platform() {
 				copy="Most of the work in a private-market allocation is administrative. None of it is yours."
 			/>
 
+			{/*
+			 * Rows fill teal on hover, so everything inside inverts with the
+			 * fill — foreground for the text, the dark ground for marks that
+			 * were teal already. Each row also pulls the gutter back and repays
+			 * it as its own padding, so the fill reaches the screen edges while
+			 * the content stays in the column.
+			 */}
 			<ol className="mt-[clamp(48px,6vw,96px)] border-y border-border">
 				{layers.map((layer, index) => (
 					<li
 						key={layer.name}
-						className="group grid gap-x-8 gap-y-5 border-t border-border py-7 transition-colors first:border-t-0 hover:bg-surface md:grid-cols-[4.5rem_1fr] lg:grid-cols-[4.5rem_1.1fr_1.3fr]"
+						className="fx-bleed group -mx-[var(--gutter)] grid gap-x-8 gap-y-5 border-t border-border py-7 transition-colors first:border-t-0 hover:bg-primary hover:text-primary-foreground md:grid-cols-[4.5rem_1fr] lg:grid-cols-[4.5rem_1.1fr_1.3fr]"
 					>
 						{/*
 						 * The spine. One continuous rule through every layer, with each
@@ -74,19 +81,21 @@ export function Platform() {
 						<div className="relative">
 							<span
 								aria-hidden
-								className="absolute top-[-1.75rem] bottom-[-1.75rem] left-[3px] w-px bg-surface-muted"
+								className="absolute top-[-1.75rem] bottom-[-1.75rem] left-[3px] w-px bg-surface-muted group-hover:bg-primary-foreground/20"
 							/>
 							<span
 								aria-hidden
-								className="absolute top-1.5 left-0 size-1.5 bg-accent transition-colors group-hover:bg-primary"
+								className="absolute top-1.5 left-0 size-1.5 bg-accent transition-colors group-hover:bg-primary-foreground"
 							/>
-							<span className="fx-eyebrow block pl-6 text-muted tabular-nums">
+							<span className="fx-eyebrow block pl-6 text-muted transition-colors tabular-nums group-hover:text-primary-foreground/70">
 								{String(index + 1).padStart(2, "0")}
 							</span>
 						</div>
 
 						<div>
-							<p className="fx-eyebrow text-muted">{layer.name}</p>
+							<p className="fx-eyebrow text-muted transition-colors group-hover:text-primary-foreground/70">
+								{layer.name}
+							</p>
 							<h3 className="mt-3 text-[clamp(19px,1.9vw,30px)] leading-[1.06] font-extrabold tracking-[-0.04em] text-balance uppercase">
 								{layer.claim}
 							</h3>
@@ -98,12 +107,12 @@ export function Platform() {
 							 * used for labels. Mono uppercase under a strikethrough is
 							 * dense enough to stop being readable.
 							 */}
-							<p className="flex gap-2.5 text-sm text-muted/70">
+							<p className="flex gap-2.5 text-sm text-muted/70 transition-colors group-hover:text-primary-foreground/60">
 								<span aria-hidden>✕</span>
-								<s className="decoration-muted/50">{layer.chore}</s>
+								<s className="decoration-current/50">{layer.chore}</s>
 							</p>
 
-							<p className="mt-3 max-w-xl text-sm text-pretty text-muted">
+							<p className="mt-3 max-w-xl text-sm text-pretty text-muted transition-colors group-hover:text-primary-foreground/85">
 								{layer.body}
 							</p>
 						</div>
