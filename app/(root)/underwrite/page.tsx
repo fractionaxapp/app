@@ -4,6 +4,8 @@ import { notFound } from "next/navigation";
 import { StagePage } from "../_components/stage-page";
 import { stageBySlug } from "../_components/stages";
 import { UnderwritingExtract } from "../_components/underwriting-extract";
+import { UnderwritingLimits } from "../_components/underwriting-limits";
+import { UnderwritingParity } from "../_components/underwriting-parity";
 import { UnderwritingTable } from "../_components/underwriting-table";
 
 const stage = stageBySlug("underwrite");
@@ -22,6 +24,8 @@ export default function UnderwritePage() {
 		<StagePage stage={stage}>
 			<UnderwritingExtract />
 			<UnderwritingTable />
+			<UnderwritingParity />
+			<UnderwritingLimits />
 		</StagePage>
 	);
 }
