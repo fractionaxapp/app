@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 
 import { TrackedLink } from "@/app/_components/tracked-link";
 
-import { Wordmark } from "./logo";
+import { Wordmark } from "@/app/_components/logo";
 import { Arrow } from "./ui";
 
 const navigation = [

@@ -276,6 +276,43 @@ details[open] .fx-outline,
 	}
 }
 
+/*
+ * Fills hollow type left to right as it scrolls into view. Pairs with
+ * .fx-outline: the stroke stays, and a solid wipe crosses the glyph interiors
+ * through background-clip, driven by the element's own view timeline.
+ *
+ * Everything sits inside the guard, so browsers without scroll-driven
+ * animations get the plain hollow word rather than a permanently half-filled
+ * one.
+ */
+@supports (animation-timeline: view()) {
+	@keyframes fx-wipe {
+		from {
+			background-size: 0% 100%;
+		}
+		to {
+			background-size: 100% 100%;
+		}
+	}
+
+	.fx-wipe {
+		background-image: linear-gradient(var(--foreground), var(--foreground));
+		background-repeat: no-repeat;
+		background-size: 0% 100%;
+		-webkit-background-clip: text;
+		background-clip: text;
+		animation: fx-wipe linear both;
+		animation-timeline: view();
+		animation-range: entry 15% cover 65%;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.fx-wipe {
+		animation: none;
+	}
+}
+
 /* Continuous ticker. The track holds the list twice, so -50% loops seamlessly. */
 @keyframes fx-marquee {
 	from {
