@@ -2,11 +2,7 @@ import Link from "next/link";
 
 import { LogoMark } from "@/app/_components/logo";
 
-/*
- * Product and Access point at real destinations. Legal does not yet — those
- * three pages need writing before launch, and a footer full of links that go
- * nowhere is worse than a short one.
- */
+/* Every link here resolves to a real destination. */
 const groups = [
 	{
 		heading: "Product",
@@ -27,9 +23,9 @@ const groups = [
 	{
 		heading: "Legal",
 		links: [
-			{ href: "/#privacy", label: "Privacy" },
-			{ href: "/#terms", label: "Terms" },
-			{ href: "/#disclosures", label: "Disclosures" },
+			{ href: "/privacy", label: "Privacy" },
+			{ href: "/terms", label: "Terms" },
+			{ href: "/disclosures", label: "Disclosures" },
 		],
 	},
 ];

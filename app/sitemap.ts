@@ -7,7 +7,12 @@ import { absoluteUrl } from "@/lib/site";
  * dashboard is disallowed in robots.ts. Add entries as (root) routes land, or
  * map over a CMS response for content-driven pages.
  */
-const routes = [{ path: "/", changeFrequency: "monthly", priority: 1 }] as const;
+const routes = [
+	{ path: "/", changeFrequency: "monthly", priority: 1 },
+	{ path: "/privacy", changeFrequency: "yearly", priority: 0.3 },
+	{ path: "/terms", changeFrequency: "yearly", priority: 0.3 },
+	{ path: "/disclosures", changeFrequency: "yearly", priority: 0.3 },
+] as const;
 
 export default function sitemap(): MetadataRoute.Sitemap {
 	const lastModified = new Date();

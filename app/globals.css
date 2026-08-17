@@ -285,6 +285,74 @@ details[open] .fx-outline,
 	}
 }
 
+/*
+ * Long-form prose. The rest of the site is display type and mono labels, so
+ * this is the one place that needs ordinary reading typography — set once
+ * here rather than repeated as utilities across every legal page.
+ */
+.fx-prose {
+	font-size: 1rem;
+	line-height: 1.7;
+	color: var(--muted);
+	text-wrap: pretty;
+}
+
+.fx-prose > * + * {
+	margin-top: 1.25rem;
+}
+
+.fx-prose h2 {
+	margin-top: 3.5rem;
+	font-size: clamp(19px, 1.7vw, 24px);
+	font-weight: 800;
+	line-height: 1.15;
+	letter-spacing: -0.03em;
+	text-transform: uppercase;
+	color: var(--foreground);
+}
+
+.fx-prose h3 {
+	margin-top: 2.5rem;
+	font-size: 1rem;
+	font-weight: 700;
+	color: var(--foreground);
+}
+
+.fx-prose strong {
+	font-weight: 600;
+	color: var(--foreground);
+}
+
+.fx-prose ul {
+	display: flex;
+	flex-direction: column;
+	gap: 0.75rem;
+	padding-left: 0;
+	list-style: none;
+}
+
+/* Square marks, matching the bullets used everywhere else on the page. */
+.fx-prose li {
+	position: relative;
+	padding-left: 1.5rem;
+}
+
+.fx-prose li::before {
+	content: "";
+	position: absolute;
+	top: 0.7em;
+	left: 0;
+	width: 0.3rem;
+	height: 0.3rem;
+	background: var(--accent);
+}
+
+.fx-prose a {
+	color: var(--primary);
+	text-underline-offset: 3px;
+	text-decoration-line: underline;
+}
+
 /* Continuous ticker. The track holds the list twice, so -50% loops seamlessly. */
 @keyframes fx-marquee {
 	from {
