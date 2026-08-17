@@ -9,7 +9,7 @@ join against it.
 
 | Table | Purpose |
 | --- | --- |
-| `users` | One row per Privy DID, with email/phone/OAuth subject |
+| `users` | One row per Privy DID, with email/phone/OAuth subject and beta access status |
 | `user_wallets` | One row per wallet, embedded or externally connected |
 | `login_events` | Append-only login history |
 
@@ -67,3 +67,42 @@ npm run db:migrate
 
 Reads `DATABASE_URL` from `.env.local`. Run it against the droplet before
 deploying code that depends on a new table.
+
+## Admitting someone to the private beta
+
+Signing in creates an account; it does not grant access. Every row starts at
+`waitlisted` and the dashboard shows the queue screen until it says `approved`.
+There is no admin UI yet — this is done in psql.
+
+See who is waiting, longest first:
+
+```sql
+SELECT email, created_at, last_login_at
+FROM users
+WHERE access_status = 'waitlisted'
+ORDER BY created_at;
+```
+
+Admit one:
+
+```sql
+UPDATE users
+SET access_status = 'approved', approved_at = now()
+WHERE email = 'someone@example.com';
+```
+
+Turn one down. The account keeps its row and its history, and the dashboard
+tells them plainly rather than leaving them queuing forever:
+
+```sql
+UPDATE users SET access_status = 'declined' WHERE email = 'someone@example.com';
+```
+
+Revoking access is the same statement with `'waitlisted'`. Nothing else needs
+doing — the dashboard reads this column on every request, so the change takes
+effect on their next page load.
+
+**The default is restrictive on purpose.** A row that appears by any route —
+login, webhook, manual insert — starts with no access. If the database is
+unreachable, or a login has not yet been mirrored, the app treats the account
+as waiting rather than as admitted.

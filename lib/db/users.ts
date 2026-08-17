@@ -7,6 +7,9 @@ import { transaction } from "./client";
  * truth for authentication; these rows are our durable copy.
  */
 
+/** Set by hand during the private beta — see db/README.md. */
+export type AccessStatus = "waitlisted" | "approved" | "declined";
+
 export type AppUser = {
 	id: string;
 	privy_did: string;
@@ -14,9 +17,19 @@ export type AppUser = {
 	phone: string | null;
 	oauth_provider: string | null;
 	oauth_subject: string | null;
+	access_status: AccessStatus;
+	approved_at: Date | null;
 	created_at: Date;
 	updated_at: Date;
 	last_login_at: Date | null;
+};
+
+export type AccessRecord = {
+	status: AccessStatus;
+	/** When the account was created, i.e. when they joined the queue. */
+	joinedAt: Date;
+	/** Waitlisted accounts that joined earlier. Null once approved. */
+	ahead: number | null;
 };
 
 export type WalletSnapshot = {
@@ -137,5 +150,49 @@ export async function findUserByPrivyDid(did: string): Promise<AppUser | null> {
 		);
 
 		return rows[0] ?? null;
+	});
+}
+
+/*
+ * `ahead` counts only accounts still waiting, so the number falls as the queue
+ * is worked through rather than staying fixed at the position they joined at.
+ * It is left null for anyone already approved, where it would mean nothing.
+ */
+const SELECT_ACCESS = `
+	SELECT
+		u.access_status,
+		u.created_at,
+		CASE WHEN u.access_status = 'waitlisted' THEN (
+			SELECT count(*) FROM users w
+			WHERE w.access_status = 'waitlisted' AND w.created_at < u.created_at
+		) END AS ahead
+	FROM users u
+	WHERE u.privy_did = $1
+`;
+
+/**
+ * Where an account stands in the beta queue. Returns null when there is no row
+ * for the identity, which the caller must treat as no access rather than as an
+ * error — a missing mirror row is exactly the state a brand new sign-in is in.
+ */
+export async function findAccessByPrivyDid(
+	did: string,
+): Promise<AccessRecord | null> {
+	return transaction(async (client) => {
+		const { rows } = await client.query<{
+			access_status: AccessStatus;
+			created_at: Date;
+			ahead: string | null;
+		}>(SELECT_ACCESS, [did]);
+
+		const row = rows[0];
+		if (!row) return null;
+
+		return {
+			status: row.access_status,
+			joinedAt: row.created_at,
+			// count() comes back as a bigint string from pg.
+			ahead: row.ahead === null ? null : Number(row.ahead),
+		};
 	});
 }
