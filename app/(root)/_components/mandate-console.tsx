@@ -210,21 +210,24 @@ function StageVisual({ visual }: { visual: Visual }) {
 
 export function MandateConsole() {
 	const [activeIndex, setActiveIndex] = useState(0);
-	const [isAuto, setIsAuto] = useState(true);
 
+	/*
+	 * One timeout per step rather than a repeating interval, keyed on the step
+	 * itself. Picking a stage therefore restarts the clock from there and the
+	 * run carries on, instead of stopping the walkthrough for good — choosing
+	 * where to look should not be the same gesture as switching it off.
+	 */
 	useEffect(() => {
-		if (!isAuto) return;
-
 		// Auto-advance is decoration; honour a stated preference against it.
 		if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
 
-		const timer = window.setInterval(
+		const timer = window.setTimeout(
 			() => setActiveIndex((index) => (index + 1) % steps.length),
 			STEP_DURATION_MS,
 		);
 
-		return () => window.clearInterval(timer);
-	}, [isAuto]);
+		return () => window.clearTimeout(timer);
+	}, [activeIndex]);
 
 	const active = steps[activeIndex];
 
@@ -264,10 +267,7 @@ export function MandateConsole() {
 						<button
 							key={step.id}
 							type="button"
-							onClick={() => {
-								setActiveIndex(index);
-								setIsAuto(false);
-							}}
+							onClick={() => setActiveIndex(index)}
 							data-active={isActive}
 							aria-current={isActive ? "step" : undefined}
 							className="group flex cursor-pointer flex-col gap-3 bg-surface px-4 py-4 text-left transition-colors hover:bg-surface-muted"
