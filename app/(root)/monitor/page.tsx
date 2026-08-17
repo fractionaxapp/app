@@ -2,7 +2,9 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
 import { MonitorDrift } from "../_components/monitor-drift";
+import { MonitorEscalation } from "../_components/monitor-escalation";
 import { MonitorLedger } from "../_components/monitor-ledger";
+import { MonitorLimits } from "../_components/monitor-limits";
 import { StagePage } from "../_components/stage-page";
 import { stageBySlug } from "../_components/stages";
 
@@ -22,6 +24,8 @@ export default function MonitorPage() {
 		<StagePage stage={stage}>
 			<MonitorLedger />
 			<MonitorDrift />
+			<MonitorEscalation />
+			<MonitorLimits />
 		</StagePage>
 	);
 }
