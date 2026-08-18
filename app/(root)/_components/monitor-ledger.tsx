@@ -10,6 +10,8 @@
  * and reconciling.
  */
 
+import { SectionBar } from "./ui";
+
 type Event = {
 	date: string;
 	label: string;
@@ -87,95 +89,96 @@ const marks = {
 export function MonitorLedger() {
 	return (
 		<section className="fx-section fx-bleed">
-			<div className="grid gap-x-8 gap-y-10 lg:grid-cols-[1fr_2fr_1fr]">
-				<div>
-					<p className="fx-eyebrow text-muted">One position, watched</p>
-					<p className="mt-4 max-w-70 text-pretty text-muted">
-						The deal underwritten on the previous page, eleven months in.
-						Nothing has breached. Two things are worth looking at.
-					</p>
-				</div>
+			<SectionBar
+				label="One position, watched"
+				copy="The deal underwritten on the previous page, eleven months in. Nothing has breached. Two things are worth looking at."
+			/>
 
-				<div className="min-w-0 lg:col-span-2">
-					<div className="border border-border bg-surface">
-						<div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2 border-b border-border px-5 py-3.5">
-							<p className="fx-eyebrow text-muted">
-								Receivables pool VII · SG · trade finance
-							</p>
-							<p className="fx-eyebrow flex items-center gap-2.5 text-primary">
-								<span aria-hidden className="size-1.5 bg-primary" />
-								Held
-							</p>
-						</div>
+			<div className="mt-10 min-w-0">
+				<div className="border border-border bg-surface">
+					<div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2 border-b border-border px-5 py-3.5">
+						<p className="fx-eyebrow text-muted">
+							Receivables pool VII · SG · trade finance
+						</p>
+						<p className="fx-eyebrow flex items-center gap-2.5 text-primary">
+							<span aria-hidden className="size-1.5 bg-primary" />
+							Held
+						</p>
+					</div>
 
-						<ol className="px-5 py-2">
-							{events.map((event) => (
-								<li key={event.date} className="flex gap-4 py-3.5">
-									{/* Spine, as in the Underneath section — one continuous
+					<ol className="px-5 py-2">
+						{events.map((event) => (
+							<li key={event.date} className="flex gap-4 py-3.5">
+								{/* Spine, as in the Underneath section — one continuous
 									    rule with each event sitting on it as a node. */}
-									<div className="relative flex w-1.5 shrink-0 justify-center">
-										<span
-											aria-hidden
-											className="absolute inset-y-[-0.875rem] w-px bg-border"
-										/>
-										<span
-											aria-hidden
-											className={`relative mt-1.5 size-1.5 shrink-0 ${marks[event.state]}`}
-										/>
-									</div>
+								<div className="relative flex w-1.5 shrink-0 justify-center">
+									<span
+										aria-hidden
+										className="absolute inset-y-[-0.875rem] w-px bg-border"
+									/>
+									<span
+										aria-hidden
+										className={`relative mt-1.5 size-1.5 shrink-0 ${marks[event.state]}`}
+									/>
+								</div>
 
-									<div className="flex flex-1 flex-wrap items-baseline justify-between gap-x-6 gap-y-1">
-										<div>
-											<p className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-												<span className="fx-eyebrow text-muted tabular-nums">
-													{event.date}
-												</span>
-												<span
-													className={`text-sm ${
-														event.state === "watch"
-															? "font-semibold text-accent"
-															: event.state === "due"
-																? "text-muted"
-																: ""
-													}`}
-												>
-													{event.label}
-												</span>
-											</p>
-											<p className="mt-1 text-sm text-muted">{event.detail}</p>
-										</div>
+								{/*
+								 * Four ledger tracks — when, what, detail, value — rather
+								 * than a left cluster with the value at the far edge. At
+								 * full width the stacked version leaves the middle empty
+								 * and the value stops reading as belonging to the row.
+								 */}
+								<div className="grid flex-1 gap-x-8 gap-y-1 lg:grid-cols-[8rem_minmax(0,1fr)_minmax(0,1.4fr)_6rem] lg:items-baseline">
+									<span className="fx-eyebrow text-muted tabular-nums">
+										{event.date}
+									</span>
 
-										<p
-											className={`font-mono text-sm tabular-nums ${
-												event.state === "watch"
-													? "text-accent"
-													: event.state === "due"
-														? "text-muted"
-														: ""
-											}`}
-										>
-											{event.value}
-										</p>
-									</div>
-								</li>
-							))}
-						</ol>
+									<span
+										className={`text-sm ${
+											event.state === "watch"
+												? "font-semibold text-accent"
+												: event.state === "due"
+													? "text-muted"
+													: ""
+										}`}
+									>
+										{event.label}
+									</span>
 
-						<div className="flex gap-3 border-t border-border bg-accent/[0.06] px-5 py-4">
-							<span aria-hidden className="mt-0.5 text-accent">
-								!
-							</span>
-							<p className="text-sm text-pretty text-muted">
-								<strong className="font-semibold text-foreground">
-									Two flags, no breach.
-								</strong>{" "}
-								Coverage has fallen every quarter since settlement and now sits
-								0.02× above the floor, and the last coupon arrived late. Either
-								alone is unremarkable. Together they are worth a question to the
-								issuer — which is a call you can still make, because it is
-								August and not the maturity date.
-							</p>
-						</div>
+									<span className="text-sm text-pretty text-muted">
+										{event.detail}
+									</span>
+
+									<span
+										className={`font-mono text-sm tabular-nums lg:text-right ${
+											event.state === "watch"
+												? "text-accent"
+												: event.state === "due"
+													? "text-muted"
+													: ""
+										}`}
+									>
+										{event.value}
+									</span>
+								</div>
+							</li>
+						))}
+					</ol>
+
+					<div className="flex gap-3 border-t border-border bg-accent/[0.06] px-5 py-4">
+						<span aria-hidden className="mt-0.5 text-accent">
+							!
+						</span>
+						<p className="text-sm text-pretty text-muted">
+							<strong className="font-semibold text-foreground">
+								Two flags, no breach.
+							</strong>{" "}
+							Coverage has fallen every quarter since settlement and now sits
+							0.02× above the floor, and the last coupon arrived late. Either
+							alone is unremarkable. Together they are worth a question to the
+							issuer — which is a call you can still make, because it is August
+							and not the maturity date.
+						</p>
 					</div>
 				</div>
 			</div>
