@@ -101,6 +101,26 @@ tunnel. Once you terminate TLS on Postgres itself, set `DATABASE_SSL=true`, and
 add `DATABASE_SSL_STRICT=true` only when the certificate chain is verifiable —
 a self-signed certificate will fail strict verification.
 
+### Hosted Postgres
+
+If `DATABASE_URL` points at a managed provider (Neon, Supabase, a DO managed
+cluster) rather than the droplet, none of the SQL in this file changes — only
+how you reach it. Use the connection string instead of a local superuser:
+
+```bash
+psql "$DATABASE_URL" -c "SELECT email, access_status FROM users ORDER BY created_at DESC LIMIT 5;"
+```
+
+Leave `DATABASE_SSL` unset. Managed providers put `sslmode=require` in the
+connection string and `pg` reads it, so setting `DATABASE_SSL=true` without
+`DATABASE_SSL_STRICT=true` would override a verified connection with an
+unverified one — the wrong direction.
+
+Prefer `sslmode=verify-full` in the URL where the provider supports it. `pg`
+treats `require` as `verify-full` today and warns that it will stop doing so in
+v9, at which point a URL saying `require` would quietly stop checking the
+certificate.
+
 ### Connection limits
 
 Postgres defaults to 100 connections shared across everything on the box. The
