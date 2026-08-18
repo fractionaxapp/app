@@ -1,5 +1,7 @@
 import "server-only";
 
+import { connection } from "next/server";
+
 import { isDatabaseEnabled } from "@/lib/db/client";
 import { findAccessByPrivyDid, type AccessRecord } from "@/lib/db/users";
 import { getSessionUser } from "@/lib/wallet/server";
@@ -33,6 +35,11 @@ export type Access =
 	  };
 
 export async function getAccess(): Promise<Access> {
+	// Every answer here is specific to one request; none may be prerendered.
+	// getSessionUser returns early without reading cookies when auth is not
+	// configured, so this cannot be left to the cookie read to establish.
+	await connection();
+
 	const user = await getSessionUser();
 	if (!user) return { state: "signed-out" };
 

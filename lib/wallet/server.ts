@@ -2,6 +2,7 @@ import "server-only";
 
 import { PrivyClient, type User } from "@privy-io/server-auth";
 import { cookies } from "next/headers";
+import { cache } from "react";
 
 import type { PrivyUserSnapshot } from "@/lib/db/users";
 
@@ -86,8 +87,13 @@ export async function resolveUser(
  * Every Server Component or Route Handler that exposes user data must call
  * this. Never infer identity from a client-supplied value, and never treat
  * proxy.ts as sufficient: it only checks that a cookie is present.
+ *
+ * Wrapped in React's cache so that several components on one page — the
+ * sidebar deciding what to show, the page deciding what to render — verify the
+ * session once between them rather than once each. The cache is per request,
+ * so it never carries an identity across users.
  */
-export async function getSessionUser(): Promise<User | null> {
+export const getSessionUser = cache(async (): Promise<User | null> => {
 	if (!isServerAuthConfigured) return null;
 
 	const cookieStore = await cookies();
@@ -101,7 +107,7 @@ export async function getSessionUser(): Promise<User | null> {
 		session.userId,
 		cookieStore.get(IDENTITY_TOKEN_COOKIE)?.value,
 	);
-}
+});
 
 /** Flatten Privy's user object into the shape lib/db/users persists. */
 export function toUserSnapshot(user: User): PrivyUserSnapshot {

@@ -140,7 +140,32 @@ deploying code that depends on a new table.
 
 Signing in creates an account; it does not grant access. Every row starts at
 `waitlisted` and the dashboard shows the queue screen until it says `approved`.
-There is no admin UI yet — this is done in psql.
+
+### From the screen
+
+`/dashboard/admin` lists the queue longest-wait first, with Admit, Decline and
+Revoke on each row, and records every change in `access_changes` against the
+administrator who made it.
+
+Who may open it comes from the environment, never from the database — a flag in
+a table can be flipped by anything that can write to the table, including the
+product itself:
+
+```bash
+ADMIN_EMAILS=you@example.com,partner@example.com
+# or, stable across an address change (the "Account ID" on the profile screen):
+ADMIN_PRIVY_DIDS=did:privy:clxxxx
+```
+
+With neither set there are no administrators and the screen renders nothing to
+anyone. Both are read per request, so adding one takes a restart rather than a
+rebuild. Administrators do not need to be admitted themselves, which is what
+makes the first admission possible.
+
+### From psql
+
+Still the fastest route when you are already in a shell, and the only route
+before the first administrator is named.
 
 See who is waiting, longest first:
 

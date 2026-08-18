@@ -5,12 +5,18 @@ import { usePathname } from "next/navigation";
 
 import { navigation } from "./navigation";
 
-export function AppNav() {
+/* `extra` carries links the server decided this user may see. */
+export function AppNav({
+	extra = [],
+}: {
+	extra?: readonly { href: string; label: string }[];
+}) {
 	const pathname = usePathname();
+	const items = [...navigation, ...extra];
 
 	return (
 		<nav className="flex flex-col">
-			{navigation.map((item) => {
+			{items.map((item) => {
 				const isActive = pathname === item.href;
 
 				return (
