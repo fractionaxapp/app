@@ -21,7 +21,7 @@ import { getSessionUser } from "@/lib/wallet/server";
 
 export type Access =
 	| { state: "signed-out" }
-	| { state: "approved"; email: string | null }
+	| { state: "approved"; email: string | null; did: string }
 	| {
 			state: "waiting";
 			email: string | null;
@@ -68,7 +68,10 @@ export async function getAccess(): Promise<Access> {
 		};
 	}
 
-	if (record?.status === "approved") return { state: "approved", email };
+	// The DID comes from the verified session, never from a client value —
+	// every page that queries by it inherits that guarantee.
+	if (record?.status === "approved")
+		return { state: "approved", email, did: user.id };
 
 	return {
 		state: "waiting",

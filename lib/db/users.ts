@@ -196,3 +196,61 @@ export async function findAccessByPrivyDid(
 		};
 	});
 }
+
+export type WalletRow = {
+	address: string;
+	chain_type: string;
+	wallet_client_type: string | null;
+	is_embedded: boolean;
+	created_at: Date;
+};
+
+export type LoginRow = {
+	method: string | null;
+	ip: string | null;
+	user_agent: string | null;
+	occurred_at: Date;
+};
+
+export type Profile = {
+	user: AppUser;
+	wallets: WalletRow[];
+	logins: LoginRow[];
+};
+
+/**
+ * Everything the profile screen shows, in one round trip. Returns null when
+ * there is no mirror row yet, which the caller treats the same as no data
+ * rather than as an error.
+ *
+ * The login history is capped deliberately: the table is append-only and grows
+ * without bound, and a profile page has no business selecting all of it.
+ */
+export async function findProfileByPrivyDid(
+	did: string,
+): Promise<Profile | null> {
+	return transaction(async (client) => {
+		const { rows: users } = await client.query<AppUser>(
+			"SELECT * FROM users WHERE privy_did = $1",
+			[did],
+		);
+
+		const user = users[0];
+		if (!user) return null;
+
+		const { rows: wallets } = await client.query<WalletRow>(
+			`SELECT address, chain_type, wallet_client_type, is_embedded, created_at
+			 FROM user_wallets WHERE user_id = $1 ORDER BY created_at`,
+			[user.id],
+		);
+
+		const { rows: logins } = await client.query<LoginRow>(
+			`SELECT method, host(ip) AS ip, user_agent, occurred_at
+			 FROM login_events WHERE user_id = $1
+			 ORDER BY occurred_at DESC LIMIT 5`,
+			[user.id],
+		);
+
+		return { user, wallets, logins };
+	});
+}
