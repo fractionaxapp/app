@@ -134,10 +134,16 @@ export const stages: Stage[] = [
 				body: "Monitoring uses the same parsed fields the underwriting used, so a change is measured against the thing you actually bought.",
 			},
 		],
+		/*
+		 * These have to agree with the ledger and the drift table above them.
+		 * The page argues that a position is worth watching closely, and closing
+		 * it on a next-coupon date and a passing covenant test read as
+		 * reassurance — the opposite of what the sections above just showed.
+		 */
 		figures: [
-			{ value: "Sep 1", label: "Next coupon, example position" },
-			{ value: "Pass", label: "Covenant test" },
-			{ value: "+0.7%", label: "NAV, month to date" },
+			{ value: "84%", label: "Of underwritten coverage remaining" },
+			{ value: "7%", label: "Of covenant headroom remaining" },
+			{ value: "0", label: "Covenants breached" },
 		],
 		illustrative: true,
 	},
