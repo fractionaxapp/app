@@ -79,11 +79,11 @@ export function SectionHeading({
  * comparison. Alternating the two gives a page of evidence a rhythm instead of
  * six identical boxes.
  */
-export function SectionBar({ label, copy }: { label: string; copy: string }) {
+export function SectionBar({ label, copy }: { label: string; copy?: string }) {
 	return (
 		<div className="flex flex-wrap items-baseline justify-between gap-x-10 gap-y-3 border-b border-border pb-5">
 			<p className="fx-eyebrow text-muted">{label}</p>
-			<p className="max-w-2xl text-pretty text-muted">{copy}</p>
+			{copy ? <p className="max-w-2xl text-pretty text-muted">{copy}</p> : null}
 		</div>
 	);
 }

@@ -3,7 +3,7 @@ import Link from "next/link";
 import { TrackedLink } from "@/app/_components/tracked-link";
 
 import { nextStage, stages, type Stage } from "./stages";
-import { Arrow, actionClass } from "./ui";
+import { Arrow, SectionBar, actionClass } from "./ui";
 
 /*
  * One frame for all four stage pages. They share a shape deliberately: someone
@@ -36,7 +36,8 @@ export function StagePage({
 				<div className="fx-bleed relative py-[clamp(40px,5vw,88px)]">
 					<p className="fx-eyebrow flex items-center gap-2.5 text-muted">
 						<span className="text-accent tabular-nums">
-							{String(index + 1).padStart(2, "0")} / {String(stages.length).padStart(2, "0")}
+							{String(index + 1).padStart(2, "0")} /{" "}
+							{String(stages.length).padStart(2, "0")}
 						</span>
 						{stage.verb}
 					</p>
@@ -70,7 +71,10 @@ export function StagePage({
 								<Arrow />
 							</TrackedLink>
 
-							<Link href="/#workflow" className={`${actionClass("ghost")} w-full`}>
+							<Link
+								href="/#workflow"
+								className={`${actionClass("ghost")} w-full`}
+							>
 								See the whole workflow
 								<Arrow />
 							</Link>
@@ -113,73 +117,72 @@ export function StagePage({
 				</nav>
 			</section>
 
+			{/*
+			 * Three abreast rather than a vertical list in a middle column. As a
+			 * list it left both outer thirds of the page empty for its whole
+			 * height, and the three points are peers — stacking them implied a
+			 * sequence that does not exist.
+			 */}
 			<section className="fx-section fx-bleed">
-				<div className="grid gap-x-8 gap-y-10 lg:grid-cols-[1fr_2fr_1fr]">
-					<p className="fx-eyebrow text-muted">How it works</p>
+				<SectionBar label="How it works" />
 
-					<ol className="border-t border-border">
-						{stage.points.map((point, pointIndex) => (
-							<li
-								key={point.title}
-								className="grid gap-x-6 gap-y-3 border-b border-border py-7 sm:grid-cols-[2.5rem_1fr]"
-							>
-								<span className="fx-eyebrow text-accent tabular-nums">
-									{String(pointIndex + 1).padStart(2, "0")}
-								</span>
+				<ol className="mt-10 grid gap-px bg-border md:grid-cols-3">
+					{stage.points.map((point, pointIndex) => (
+						<li
+							key={point.title}
+							className="flex flex-col gap-4 bg-background px-5 py-7 sm:px-7"
+						>
+							<span className="fx-eyebrow text-accent tabular-nums">
+								{String(pointIndex + 1).padStart(2, "0")}
+							</span>
 
-								<div>
-									<h2 className="text-[clamp(18px,1.7vw,25px)] leading-tight font-extrabold tracking-[-0.035em] text-balance uppercase">
-										{point.title}
-									</h2>
-									<p className="mt-3 max-w-2xl text-pretty text-muted">
-										{point.body}
-									</p>
-								</div>
-							</li>
-						))}
-					</ol>
-				</div>
+							<h2 className="text-[clamp(18px,1.7vw,25px)] leading-tight font-extrabold tracking-[-0.035em] text-balance uppercase">
+								{point.title}
+							</h2>
+
+							<p className="text-pretty text-muted">{point.body}</p>
+						</li>
+					))}
+				</ol>
 			</section>
 
 			{children}
 
 			<section className="fx-section fx-bleed bg-surface">
-				<div className="grid gap-x-8 gap-y-10 lg:grid-cols-[1fr_2fr_1fr]">
-					<p className="fx-eyebrow text-muted">In numbers</p>
+				<SectionBar label="In numbers" />
 
-					<div>
-						<dl className="grid gap-px bg-border sm:grid-cols-3">
-							{stage.figures.map((figure) => (
-								<div key={figure.label} className="bg-surface px-5 py-6">
-									<dt className="font-mono text-[clamp(22px,2.2vw,34px)] leading-none font-medium tracking-tight text-accent tabular-nums">
-										{figure.value}
-									</dt>
-									<dd className="fx-eyebrow mt-3 text-muted">{figure.label}</dd>
-								</div>
-							))}
-						</dl>
+				<dl className="mt-10 grid gap-px bg-border sm:grid-cols-3">
+					{stage.figures.map((figure) => (
+						<div key={figure.label} className="bg-surface px-5 py-8 sm:px-7">
+							<dt className="font-mono text-[clamp(28px,3.4vw,52px)] leading-none font-medium tracking-tight text-accent tabular-nums">
+								{figure.value}
+							</dt>
+							<dd className="fx-eyebrow mt-4 text-muted">{figure.label}</dd>
+						</div>
+					))}
+				</dl>
 
-						{stage.illustrative ? (
-							<p className="mt-5 text-sm text-muted">
-								Figures from an example run, shown to illustrate the shape of the
-								output. See{" "}
-								<a
-									href="/disclosures"
-									className="text-primary underline underline-offset-4"
-								>
-									disclosures
-								</a>
-								.
-							</p>
-						) : null}
-					</div>
-				</div>
+				{stage.illustrative ? (
+					<p className="mt-5 max-w-3xl text-sm text-muted">
+						Figures from an example run, shown to illustrate the shape of the
+						output. See{" "}
+						<a
+							href="/disclosures"
+							className="text-primary underline underline-offset-4"
+						>
+							disclosures
+						</a>
+						.
+					</p>
+				) : null}
 			</section>
 
 			{/* The chain. The last stage sends you to the composer instead. */}
 			<section className="fx-section fx-bleed">
 				<div className="grid gap-x-8 gap-y-8 lg:grid-cols-[1fr_2fr_1fr]">
-					<p className="fx-eyebrow text-muted">{next ? "Next" : "Get started"}</p>
+					<p className="fx-eyebrow text-muted">
+						{next ? "Next" : "Get started"}
+					</p>
 
 					<div>
 						<h2 className="fx-heading max-w-[16ch]">
