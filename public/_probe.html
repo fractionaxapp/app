@@ -1,0 +1,9 @@
+<html><body style="margin:0;background:#000;color:#6f6;font:15px monospace">
+<iframe id="f" style="width:390px;height:380px;border:0;display:block"></iframe>
+<pre id="o" style="padding:14px"></pre>
+<script>
+const routes=["/","/discover","/underwrite","/execute","/monitor"];const lines=[];const f=document.getElementById('f');
+const check=r=>new Promise(d=>{f.onload=()=>setTimeout(()=>{const w=f.contentDocument.documentElement.scrollWidth;
+lines.push(r.padEnd(14)+String(w).padStart(5)+(w>391?'  OVERFLOWS':'  ok'));d();},600);f.src=r;});
+(async()=>{for(const r of routes)await check(r);document.getElementById('o').textContent='viewport 390px\n\n'+lines.join('\n');})();
+</script></body></html>

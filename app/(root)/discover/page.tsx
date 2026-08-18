@@ -23,8 +23,8 @@ export default function DiscoverPage() {
 	return (
 		<StagePage stage={stage}>
 			<DiscoveryCoverage />
-			<DiscoveryFunnel />
 			<DiscoverySchema />
+			<DiscoveryFunnel />
 			<DiscoveryGaps />
 		</StagePage>
 	);

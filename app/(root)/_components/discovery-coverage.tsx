@@ -7,7 +7,14 @@
  * named venues: naming them would imply relationships we have not described,
  * and the useful question is coverage shape rather than which logos we can
  * print.
+ *
+ * The bar is the row's background rather than a rule beneath it. At full width
+ * a label on the left and a count on the right leave several hundred pixels of
+ * nothing between them; filling that span with the bar turns the gap into the
+ * information.
  */
+
+import { SectionBar } from "./ui";
 
 type Slice = { label: string; count: number };
 
@@ -35,29 +42,29 @@ function Breakdown({ heading, slices }: { heading: string; slices: Slice[] }) {
 	const total = slices.reduce((sum, slice) => sum + slice.count, 0);
 
 	return (
-		<div className="bg-surface px-5 py-5">
-			<div className="flex items-baseline justify-between gap-4">
+		<div className="bg-surface">
+			<div className="flex items-baseline justify-between gap-4 border-b border-border px-5 py-3.5">
 				<p className="fx-eyebrow text-accent">{heading}</p>
 				<p className="fx-eyebrow text-muted tabular-nums">{total}</p>
 			</div>
 
-			<ul className="mt-4 flex flex-col gap-3">
+			<ul>
 				{slices.map((slice) => (
-					<li key={slice.label}>
-						<div className="flex items-baseline justify-between gap-4">
-							<span className="text-sm text-muted">{slice.label}</span>
-							<span className="font-mono text-sm tabular-nums">
+					<li
+						key={slice.label}
+						className="relative border-b border-border last:border-b-0"
+					>
+						<span
+							aria-hidden
+							className="absolute inset-y-0 left-0 bg-muted/10"
+							style={{ width: `${(slice.count / max) * 100}%` }}
+						/>
+
+						<div className="relative flex items-baseline justify-between gap-6 px-5 py-3">
+							<span className="text-sm">{slice.label}</span>
+							<span className="font-mono text-sm text-muted tabular-nums">
 								{slice.count}
 							</span>
-						</div>
-
-						{/* Scaled within the group, so the shape of the mix is readable
-						    rather than every bar being a sliver of 167. */}
-						<div className="mt-1.5 h-1 bg-border">
-							<div
-								className="h-full min-w-0.5 bg-muted/40"
-								style={{ width: `${(slice.count / max) * 100}%` }}
-							/>
 						</div>
 					</li>
 				))}
@@ -69,42 +76,35 @@ function Breakdown({ heading, slices }: { heading: string; slices: Slice[] }) {
 export function DiscoveryCoverage() {
 	return (
 		<section className="fx-section fx-bleed">
-			<div className="grid gap-x-8 gap-y-10 lg:grid-cols-[1fr_2fr_1fr]">
-				<div>
-					<p className="fx-eyebrow text-muted">What 167 covers</p>
-					<p className="mt-4 max-w-70 text-pretty text-muted">
-						The same platforms cut two ways. Both add to 167, which is the only
-						useful thing to check about a coverage claim.
-					</p>
+			<SectionBar
+				label="What 167 covers"
+				copy="The same platforms cut two ways. Both add to 167, which is the only useful thing to check about a coverage claim."
+			/>
+
+			<div className="mt-10 border border-border">
+				<div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2 border-b border-border px-5 py-3.5">
+					<p className="fx-eyebrow text-muted">Platforms under coverage</p>
+					<p className="fx-eyebrow text-accent tabular-nums">167</p>
 				</div>
 
-				<div className="min-w-0 lg:col-span-2">
-					<div className="border border-border">
-						<div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2 border-b border-border px-5 py-3.5">
-							<p className="fx-eyebrow text-muted">Platforms under coverage</p>
-							<p className="fx-eyebrow text-accent tabular-nums">167</p>
-						</div>
-
-						<div className="grid gap-px bg-border sm:grid-cols-2">
-							<Breakdown heading="By asset class" slices={byAssetClass} />
-							<Breakdown heading="By region" slices={byRegion} />
-						</div>
-					</div>
-
-					<p className="mt-5 text-sm text-pretty text-muted">
-						Composition from an example run — see{" "}
-						<a
-							href="/disclosures"
-							className="text-primary underline underline-offset-4"
-						>
-							disclosures
-						</a>
-						. A platform issuing across several asset classes is counted under
-						its primary one, so the two views split the same set rather than
-						double-counting it.
-					</p>
+				<div className="grid gap-px bg-border lg:grid-cols-2">
+					<Breakdown heading="By asset class" slices={byAssetClass} />
+					<Breakdown heading="By region" slices={byRegion} />
 				</div>
 			</div>
+
+			<p className="mt-5 max-w-3xl text-sm text-pretty text-muted">
+				Composition from an example run — see{" "}
+				<a
+					href="/disclosures"
+					className="text-primary underline underline-offset-4"
+				>
+					disclosures
+				</a>
+				. A platform issuing across several asset classes is counted under its
+				primary one, so the two views split the same set rather than
+				double-counting it.
+			</p>
 		</section>
 	);
 }
