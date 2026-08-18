@@ -81,18 +81,25 @@ export function ExecutionSequence() {
 									/>
 								</div>
 
-								<div className="flex flex-1 flex-wrap items-baseline justify-between gap-x-6 gap-y-1">
-									<div>
-										<p className="flex flex-wrap items-baseline gap-x-3">
-											<span className="fx-eyebrow text-muted tabular-nums">
-												{String(index + 1).padStart(2, "0")}
-											</span>
-											<span className="text-sm">{step.label}</span>
-										</p>
-										<p className="mt-1 text-sm text-muted">{step.detail}</p>
-									</div>
+								{/*
+								 * Three tracks rather than a left cluster with the time
+								 * stranded at the far edge: label, what it means, when.
+								 * At full width the two-part version left the middle of
+								 * the panel empty.
+								 */}
+								<div className="grid flex-1 gap-x-8 gap-y-1 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.6fr)_5rem] lg:items-baseline">
+									<p className="flex flex-wrap items-baseline gap-x-3">
+										<span className="fx-eyebrow text-muted tabular-nums">
+											{String(index + 1).padStart(2, "0")}
+										</span>
+										<span className="text-sm">{step.label}</span>
+									</p>
 
-									<p className="font-mono text-sm text-muted tabular-nums">
+									<p className="text-sm text-pretty text-muted">
+										{step.detail}
+									</p>
+
+									<p className="font-mono text-sm text-muted tabular-nums lg:text-right">
 										{step.at}
 									</p>
 								</div>

@@ -9,6 +9,11 @@
  *
  * It is also blocked before the shortlist, not after. Nothing you cannot buy
  * should be put in front of you.
+ *
+ * Each row is a four-track grid — deal, checks, outcome, figures — rather than
+ * a left-hand cluster with the numbers pushed to the far edge. Stacked left the
+ * row left most of the panel empty and the figures looked unrelated to the deal
+ * they belonged to.
  */
 
 import { SectionBar } from "./ui";
@@ -103,45 +108,40 @@ export function ExecutionChecks() {
 				copy="Three candidates against the policy above. The one with the best yield is the one that does not make it."
 			/>
 
-			<div className="mt-10 min-w-0">
-				<div className="border border-border">
-					<div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2 border-b border-border px-5 py-3.5">
-						<p className="fx-eyebrow text-muted">Policy check · example run</p>
-						<p className="fx-eyebrow text-muted">2 passed · 1 blocked</p>
-					</div>
+			<div className="mt-10 min-w-0 border border-border">
+				<div className="grid gap-x-8 border-b border-border px-5 py-3.5 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1.5fr)_minmax(0,1fr)_9rem]">
+					<p className="fx-eyebrow text-muted">Policy check · example run</p>
+					<p className="fx-eyebrow hidden text-muted lg:block">Rules</p>
+					<p className="fx-eyebrow hidden text-muted lg:block">Outcome</p>
+					<p className="fx-eyebrow hidden text-right text-muted lg:block">
+						2 passed · 1 blocked
+					</p>
+				</div>
 
-					<ul>
-						{candidates.map((candidate) => {
-							const blocked = candidate.outcome === "blocked";
+				<ul>
+					{candidates.map((candidate) => {
+						const blocked = candidate.outcome === "blocked";
 
-							return (
-								<li
-									key={candidate.name}
-									className="border-b border-border px-5 py-5 last:border-b-0"
-								>
-									<div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-2">
-										<div>
-											<p
-												className={`text-sm font-semibold ${
-													blocked ? "text-muted line-through" : ""
-												}`}
-											>
-												{candidate.name}
-											</p>
-											<p className="fx-eyebrow mt-1 text-muted">
-												{candidate.origin}
-											</p>
-										</div>
-
-										<div className="flex items-baseline gap-5 font-mono text-sm tabular-nums">
-											<span className={blocked ? "text-muted" : "text-accent"}>
-												{candidate.yield}
-											</span>
-											<span className="text-muted">{candidate.size}</span>
-										</div>
+						return (
+							<li
+								key={candidate.name}
+								className="border-b border-border px-5 py-5 last:border-b-0"
+							>
+								<div className="grid gap-x-8 gap-y-4 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1.5fr)_minmax(0,1fr)_9rem] lg:items-baseline">
+									<div>
+										<p
+											className={`text-sm font-semibold ${
+												blocked ? "text-muted line-through" : ""
+											}`}
+										>
+											{candidate.name}
+										</p>
+										<p className="fx-eyebrow mt-1 text-muted">
+											{candidate.origin}
+										</p>
 									</div>
 
-									<ul className="mt-4 flex flex-wrap gap-x-5 gap-y-2">
+									<ul className="flex flex-wrap gap-x-5 gap-y-2">
 										{candidate.checks.map((check) => (
 											<li
 												key={check.rule}
@@ -155,47 +155,56 @@ export function ExecutionChecks() {
 										))}
 									</ul>
 
-									{blocked ? (
-										<div className="mt-4 border-l-2 border-danger pl-4">
-											<p className="fx-eyebrow text-danger">
-												Blocked · {candidate.reason}
-											</p>
-											<ul className="mt-2 flex flex-col gap-1">
-												{candidate.checks
-													.filter((check) => !check.ok)
-													.map((check) => (
-														<li
-															key={check.rule}
-															className="text-sm text-pretty text-muted"
-														>
-															{check.detail}
-														</li>
-													))}
-											</ul>
-										</div>
-									) : (
-										<p className="fx-eyebrow mt-4 text-primary">
-											Passed · awaiting your approval
-										</p>
-									)}
-								</li>
-							);
-						})}
-					</ul>
-				</div>
+									<p
+										className={`fx-eyebrow ${
+											blocked ? "text-danger" : "text-primary"
+										}`}
+									>
+										{blocked ? "Blocked" : "Awaiting your approval"}
+									</p>
 
-				<p className="mt-5 text-sm text-pretty text-muted">
-					Constructed for illustration — see{" "}
-					<a
-						href="/disclosures"
-						className="text-primary underline underline-offset-4"
-					>
-						disclosures
-					</a>
-					. A blocked candidate is not a recommendation withheld; it is a trade
-					your own mandate does not permit.
-				</p>
+									<div className="flex items-baseline gap-5 font-mono text-sm tabular-nums lg:justify-end">
+										<span className={blocked ? "text-muted" : "text-accent"}>
+											{candidate.yield}
+										</span>
+										<span className="text-muted">{candidate.size}</span>
+									</div>
+								</div>
+
+								{blocked ? (
+									<div className="mt-4 border-l-2 border-danger pl-4">
+										<p className="fx-eyebrow text-danger">{candidate.reason}</p>
+										<ul className="mt-2 flex flex-col gap-1">
+											{candidate.checks
+												.filter((check) => !check.ok)
+												.map((check) => (
+													<li
+														key={check.rule}
+														className="text-sm text-pretty text-muted"
+													>
+														{check.detail}
+													</li>
+												))}
+										</ul>
+									</div>
+								) : null}
+							</li>
+						);
+					})}
+				</ul>
 			</div>
+
+			<p className="mt-5 max-w-3xl text-sm text-pretty text-muted">
+				Constructed for illustration — see{" "}
+				<a
+					href="/disclosures"
+					className="text-primary underline underline-offset-4"
+				>
+					disclosures
+				</a>
+				. A blocked candidate is not a recommendation withheld; it is a trade
+				your own mandate does not permit.
+			</p>
 		</section>
 	);
 }
