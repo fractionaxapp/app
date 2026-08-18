@@ -11,6 +11,8 @@
  * should be put in front of you.
  */
 
+import { SectionBar } from "./ui";
+
 type Check = { rule: string; ok: boolean; detail?: string };
 
 type Candidate = {
@@ -59,11 +61,16 @@ const candidates: Candidate[] = [
 			{
 				rule: "Size",
 				ok: false,
-				detail: "Minimum subscription $50,000 exceeds the $25,000 per-allocation limit",
+				detail:
+					"Minimum subscription $50,000 exceeds the $25,000 per-allocation limit",
 			},
 			{ rule: "Venue", ok: true },
 			{ rule: "Counterparty", ok: true },
-			{ rule: "Asset class", ok: false, detail: "Infrastructure is out of mandate" },
+			{
+				rule: "Asset class",
+				ok: false,
+				detail: "Infrastructure is out of mandate",
+			},
 		],
 		outcome: "blocked",
 		reason: "Never reached the shortlist",
@@ -91,108 +98,103 @@ function Tick({ ok }: { ok: boolean }) {
 export function ExecutionChecks() {
 	return (
 		<section className="fx-section fx-bleed bg-surface">
-			<div className="grid gap-x-8 gap-y-10 lg:grid-cols-[1fr_2fr_1fr]">
-				<div>
-					<p className="fx-eyebrow text-muted">What gets stopped</p>
-					<p className="mt-4 max-w-70 text-pretty text-muted">
-						Three candidates against the policy above. The one with the best
-						yield is the one that does not make it.
-					</p>
-				</div>
+			<SectionBar
+				label="What gets stopped"
+				copy="Three candidates against the policy above. The one with the best yield is the one that does not make it."
+			/>
 
-				<div className="min-w-0 lg:col-span-2">
-					<div className="border border-border">
-						<div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2 border-b border-border px-5 py-3.5">
-							<p className="fx-eyebrow text-muted">Policy check · example run</p>
-							<p className="fx-eyebrow text-muted">2 passed · 1 blocked</p>
-						</div>
-
-						<ul>
-							{candidates.map((candidate) => {
-								const blocked = candidate.outcome === "blocked";
-
-								return (
-									<li
-										key={candidate.name}
-										className="border-b border-border px-5 py-5 last:border-b-0"
-									>
-										<div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-2">
-											<div>
-												<p
-													className={`text-sm font-semibold ${
-														blocked ? "text-muted line-through" : ""
-													}`}
-												>
-													{candidate.name}
-												</p>
-												<p className="fx-eyebrow mt-1 text-muted">
-													{candidate.origin}
-												</p>
-											</div>
-
-											<div className="flex items-baseline gap-5 font-mono text-sm tabular-nums">
-												<span className={blocked ? "text-muted" : "text-accent"}>
-													{candidate.yield}
-												</span>
-												<span className="text-muted">{candidate.size}</span>
-											</div>
-										</div>
-
-										<ul className="mt-4 flex flex-wrap gap-x-5 gap-y-2">
-											{candidate.checks.map((check) => (
-												<li
-													key={check.rule}
-													className={`fx-eyebrow flex items-center gap-2 ${
-														check.ok ? "text-muted" : "text-danger"
-													}`}
-												>
-													<Tick ok={check.ok} />
-													{check.rule}
-												</li>
-											))}
-										</ul>
-
-										{blocked ? (
-											<div className="mt-4 border-l-2 border-danger pl-4">
-												<p className="fx-eyebrow text-danger">
-													Blocked · {candidate.reason}
-												</p>
-												<ul className="mt-2 flex flex-col gap-1">
-													{candidate.checks
-														.filter((check) => !check.ok)
-														.map((check) => (
-															<li
-																key={check.rule}
-																className="text-sm text-pretty text-muted"
-															>
-																{check.detail}
-															</li>
-														))}
-												</ul>
-											</div>
-										) : (
-											<p className="fx-eyebrow mt-4 text-primary">
-												Passed · awaiting your approval
-											</p>
-										)}
-									</li>
-								);
-							})}
-						</ul>
+			<div className="mt-10 min-w-0">
+				<div className="border border-border">
+					<div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2 border-b border-border px-5 py-3.5">
+						<p className="fx-eyebrow text-muted">Policy check · example run</p>
+						<p className="fx-eyebrow text-muted">2 passed · 1 blocked</p>
 					</div>
 
-					<p className="mt-5 text-sm text-pretty text-muted">
-						Constructed for illustration — see{" "}
-						<a
-							href="/disclosures"
-							className="text-primary underline underline-offset-4"
-						>
-							disclosures
-						</a>
-						. A blocked candidate is not a recommendation withheld; it is a
-						trade your own mandate does not permit.
-					</p>
+					<ul>
+						{candidates.map((candidate) => {
+							const blocked = candidate.outcome === "blocked";
+
+							return (
+								<li
+									key={candidate.name}
+									className="border-b border-border px-5 py-5 last:border-b-0"
+								>
+									<div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-2">
+										<div>
+											<p
+												className={`text-sm font-semibold ${
+													blocked ? "text-muted line-through" : ""
+												}`}
+											>
+												{candidate.name}
+											</p>
+											<p className="fx-eyebrow mt-1 text-muted">
+												{candidate.origin}
+											</p>
+										</div>
+
+										<div className="flex items-baseline gap-5 font-mono text-sm tabular-nums">
+											<span className={blocked ? "text-muted" : "text-accent"}>
+												{candidate.yield}
+											</span>
+											<span className="text-muted">{candidate.size}</span>
+										</div>
+									</div>
+
+									<ul className="mt-4 flex flex-wrap gap-x-5 gap-y-2">
+										{candidate.checks.map((check) => (
+											<li
+												key={check.rule}
+												className={`fx-eyebrow flex items-center gap-2 ${
+													check.ok ? "text-muted" : "text-danger"
+												}`}
+											>
+												<Tick ok={check.ok} />
+												{check.rule}
+											</li>
+										))}
+									</ul>
+
+									{blocked ? (
+										<div className="mt-4 border-l-2 border-danger pl-4">
+											<p className="fx-eyebrow text-danger">
+												Blocked · {candidate.reason}
+											</p>
+											<ul className="mt-2 flex flex-col gap-1">
+												{candidate.checks
+													.filter((check) => !check.ok)
+													.map((check) => (
+														<li
+															key={check.rule}
+															className="text-sm text-pretty text-muted"
+														>
+															{check.detail}
+														</li>
+													))}
+											</ul>
+										</div>
+									) : (
+										<p className="fx-eyebrow mt-4 text-primary">
+											Passed · awaiting your approval
+										</p>
+									)}
+								</li>
+							);
+						})}
+					</ul>
 				</div>
+
+				<p className="mt-5 text-sm text-pretty text-muted">
+					Constructed for illustration — see{" "}
+					<a
+						href="/disclosures"
+						className="text-primary underline underline-offset-4"
+					>
+						disclosures
+					</a>
+					. A blocked candidate is not a recommendation withheld; it is a trade
+					your own mandate does not permit.
+				</p>
 			</div>
 		</section>
 	);
