@@ -9,7 +9,9 @@
  * images and the sitemap, all of which must be fully qualified. Falls back to
  * localhost so `next build` works without configuration.
  */
-const url = new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000");
+const url = new URL(
+	process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000",
+);
 
 export const siteConfig = {
 	name: "Fractionax",
@@ -35,6 +37,8 @@ export const siteConfig = {
 	],
 	/** Handle without the URL, e.g. "@app". Leave empty to omit the tag. */
 	twitterHandle: "",
+	/** Where people are told to write when a form cannot take their message. */
+	contactEmail: "hello@fractionax.app",
 	colors: {
 		// Committed dark in both schemes, so the browser chrome matches either way.
 		light: "#191919",

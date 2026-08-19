@@ -29,7 +29,10 @@ export const navigation: readonly NavGroup[] = [
 export const adminNavigation: readonly NavGroup[] = [
 	{
 		label: "Administration",
-		items: [{ href: "/dashboard/admin", label: "Access" }],
+		items: [
+			{ href: "/dashboard/admin", label: "Access" },
+			{ href: "/dashboard/admin/enquiries", label: "Enquiries" },
+		],
 	},
 ];
 

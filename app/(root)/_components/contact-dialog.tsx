@@ -1,9 +1,11 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useActionState, useEffect, useRef } from "react";
 
+import { siteConfig } from "@/lib/site";
 import { trackEvent } from "@/lib/track-event";
 
+import { submitEnquiry, type ContactState } from "./contact-actions";
 import { Arrow, actionClass } from "./ui";
 
 /*
@@ -13,13 +15,17 @@ import { Arrow, actionClass } from "./ui";
  * background and Escape-to-close come from the platform rather than from a
  * hand-rolled implementation that would get one of them wrong.
  *
- * There is no endpoint yet, and this deliberately does not pretend otherwise:
- * submitting hands off to a mailto: rather than showing a fake success state.
- * A landing page that says "thanks, we'll be in touch" and drops the message
- * is worse than one that opens a mail client.
+ * The message is recorded server-side and an administrator is emailed. The
+ * confirmation below is therefore true, which is the only condition under
+ * which a landing page has any business showing one: until there was an
+ * endpoint this handed off to a mailto: instead, because "thanks, we'll be in
+ * touch" over a form that drops the message is worse than opening a mail app.
  */
 
-const CONTACT_EMAIL = "hello@fractionax.app";
+const initialState: ContactState = { status: "idle" };
+
+const fieldClass =
+	"w-full border border-border bg-background px-4 py-3 font-mono text-sm text-foreground placeholder:text-muted/60 focus-visible:border-primary focus-visible:outline-none";
 
 export function ContactDialog({
 	open,
@@ -29,7 +35,10 @@ export function ContactDialog({
 	onClose: () => void;
 }) {
 	const dialog = useRef<HTMLDialogElement>(null);
-	const [question, setQuestion] = useState("");
+	const [state, formAction, pending] = useActionState(
+		submitEnquiry,
+		initialState,
+	);
 
 	useEffect(() => {
 		const element = dialog.current;
@@ -39,13 +48,7 @@ export function ContactDialog({
 		if (!open && element.open) element.close();
 	}, [open]);
 
-	const send = () => {
-		trackEvent("contact_submit", { location: "faq" });
-
-		const subject = encodeURIComponent("Question about Fractionax");
-		const body = encodeURIComponent(question);
-		window.location.href = `mailto:${CONTACT_EMAIL}?subject=${subject}&body=${body}`;
-	};
+	const sent = state.status === "sent";
 
 	return (
 		<dialog
@@ -59,7 +62,9 @@ export function ContactDialog({
 			className="m-auto w-[min(34rem,calc(100vw-2rem))] border border-border bg-surface text-foreground backdrop:bg-background/80 backdrop:backdrop-blur-sm"
 		>
 			<div className="flex items-center justify-between gap-4 border-b border-border px-5 py-3.5">
-				<p className="fx-eyebrow text-muted">Ask us anything</p>
+				<p className="fx-eyebrow text-muted">
+					{sent ? "Message received" : "Ask us anything"}
+				</p>
 
 				<button
 					type="button"
@@ -71,47 +76,131 @@ export function ContactDialog({
 				</button>
 			</div>
 
-			<div className="px-5 py-6">
-				<h2
-					id="contact-heading"
-					className="text-[clamp(20px,2.2vw,30px)] leading-[1.05] font-extrabold tracking-[-0.04em] text-balance uppercase"
+			{sent ? (
+				<div className="px-5 py-8">
+					<h2
+						id="contact-heading"
+						className="text-[clamp(20px,2.2vw,30px)] leading-[1.05] font-extrabold tracking-[-0.04em] text-balance uppercase"
+					>
+						We have it
+					</h2>
+
+					<p className="mt-4 text-pretty text-muted">
+						A person reads these, and the reply comes from a person. If it is
+						urgent, {siteConfig.contactEmail} reaches the same place.
+					</p>
+
+					<button
+						type="button"
+						onClick={onClose}
+						className={`${actionClass("ghost")} mt-7 w-full cursor-pointer sm:w-auto sm:min-w-56`}
+					>
+						Close
+						<Arrow />
+					</button>
+				</div>
+			) : (
+				<form
+					action={formAction}
+					onSubmit={() => trackEvent("contact_submit", { location: "faq" })}
 				>
-					What do you want to know?
-				</h2>
+					<div className="px-5 py-6">
+						<h2
+							id="contact-heading"
+							className="text-[clamp(20px,2.2vw,30px)] leading-[1.05] font-extrabold tracking-[-0.04em] text-balance uppercase"
+						>
+							What do you want to know?
+						</h2>
 
-				<p className="mt-3 text-pretty text-muted">
-					Fees, custody, jurisdictions, timelines — whatever is not answered
-					above. It reaches a person, not a queue.
-				</p>
+						<p className="mt-3 text-pretty text-muted">
+							Fees, custody, jurisdictions, timelines — whatever is not answered
+							above. It reaches a person, not a queue.
+						</p>
 
-				<label htmlFor="contact-question" className="sr-only">
-					Your question
-				</label>
-				<textarea
-					id="contact-question"
-					value={question}
-					onChange={(event) => setQuestion(event.target.value)}
-					rows={5}
-					placeholder="Type your question…"
-					className="mt-6 w-full resize-y border border-border bg-background px-4 py-3 font-mono text-sm text-foreground placeholder:text-muted/60 focus-visible:border-primary focus-visible:outline-none"
-				/>
-			</div>
+						<div className="mt-6 grid gap-3 sm:grid-cols-2">
+							<div>
+								<label htmlFor="contact-name" className="sr-only">
+									Your name
+								</label>
+								<input
+									id="contact-name"
+									name="name"
+									required
+									maxLength={120}
+									autoComplete="name"
+									placeholder="Your name"
+									className={fieldClass}
+								/>
+							</div>
 
-			<div className="flex flex-col gap-4 border-t border-border px-5 py-5 sm:flex-row sm:items-center sm:justify-between">
-				<p className="text-xs text-pretty text-muted">
-					Opens your mail app, addressed to {CONTACT_EMAIL}.
-				</p>
+							<div>
+								<label htmlFor="contact-email" className="sr-only">
+									Your email
+								</label>
+								<input
+									id="contact-email"
+									name="email"
+									type="email"
+									required
+									maxLength={200}
+									autoComplete="email"
+									placeholder="you@example.com"
+									className={fieldClass}
+								/>
+							</div>
+						</div>
 
-				<button
-					type="button"
-					onClick={send}
-					disabled={question.trim().length === 0}
-					className={`${actionClass("solid")} w-full cursor-pointer disabled:pointer-events-none disabled:opacity-40 sm:w-auto sm:min-w-56`}
-				>
-					Send question
-					<Arrow />
-				</button>
-			</div>
+						<label htmlFor="contact-question" className="sr-only">
+							Your question
+						</label>
+						<textarea
+							id="contact-question"
+							name="message"
+							required
+							maxLength={4000}
+							rows={5}
+							placeholder="Type your question…"
+							className={`${fieldClass} mt-3 resize-y`}
+						/>
+
+						{/* Not shown, not tabbable, not announced. Anything that fills it
+						    in is not a person, and the submission is quietly dropped. */}
+						<div aria-hidden className="hidden">
+							<label htmlFor="contact-company">Company</label>
+							<input
+								id="contact-company"
+								name="company"
+								tabIndex={-1}
+								autoComplete="off"
+							/>
+						</div>
+
+						{state.status === "error" ? (
+							<p
+								role="alert"
+								className="mt-4 border-l-2 border-danger pl-3 text-sm text-pretty text-danger"
+							>
+								{state.message}
+							</p>
+						) : null}
+					</div>
+
+					<div className="flex flex-col gap-4 border-t border-border px-5 py-5 sm:flex-row sm:items-center sm:justify-between">
+						<p className="text-xs text-pretty text-muted">
+							We use your address to reply, and for nothing else.
+						</p>
+
+						<button
+							type="submit"
+							disabled={pending}
+							className={`${actionClass("solid")} w-full cursor-pointer disabled:pointer-events-none disabled:opacity-40 sm:w-auto sm:min-w-56`}
+						>
+							{pending ? "Sending…" : "Send question"}
+							<Arrow />
+						</button>
+					</div>
+				</form>
+			)}
 		</dialog>
 	);
 }
