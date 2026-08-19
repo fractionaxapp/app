@@ -6,7 +6,10 @@ export type NavGroup = { label: string; items: readonly NavItem[] };
 export const navigation: readonly NavGroup[] = [
 	{
 		label: "Workspace",
-		items: [{ href: "/dashboard", label: "Overview" }],
+		items: [
+			{ href: "/dashboard", label: "Overview" },
+			{ href: "/dashboard/sourcing", label: "Sourcing" },
+		],
 	},
 	{
 		label: "Account",
@@ -32,6 +35,7 @@ export const adminNavigation: readonly NavGroup[] = [
 		items: [
 			{ href: "/dashboard/admin", label: "Access" },
 			{ href: "/dashboard/admin/enquiries", label: "Enquiries" },
+			{ href: "/dashboard/admin/sources", label: "Sources" },
 		],
 	},
 ];

@@ -199,3 +199,61 @@ effect on their next page load.
 login, webhook, manual insert — starts with no access. If the database is
 unreachable, or a login has not yet been mirrored, the app treats the account
 as waiting rather than as admitted.
+
+## Deal sourcing
+
+Three tables carry it. `sources` is the venues to read, `offerings` is what
+they published, `mandates` is what each account is looking for. There is no
+results table: matching is done on read, so a result can never be stale
+relative to the index.
+
+### Adding a venue
+
+Administration → Sources, or a row in `sources`. A venue needs an endpoint that
+returns JSON or an RSS/Atom feed, plus — for JSON — a mapping saying where each
+field lives in their payload:
+
+```json
+{
+  "items": "data.offerings",
+  "externalId": "id",
+  "title": "name",
+  "netYield": "terms.apy",
+  "termMonths": "terms.months",
+  "minimum": "terms.min_investment"
+}
+```
+
+Left empty, the adapter tries the obvious names and leaves the rest null. Null
+is not zero here: the matcher reports an absent field as unverifiable rather
+than as a failure, and those offerings are shown separately from both the
+matches and the exclusions.
+
+A venue that publishes only HTML needs a parser written against its markup.
+That is a per-venue job and deliberately not guessed at — invented selectors
+produce wrong numbers silently, which is the worst way for this to fail.
+
+### Running the crawl
+
+```bash
+curl -X POST https://fractionax.app/api/cron/crawl \
+  -H "Authorization: Bearer $CRON_SECRET"
+```
+
+Hourly from cron on the droplet:
+
+```cron
+17 * * * * curl -fsS -X POST http://127.0.0.1:3000/api/cron/crawl -H "Authorization: Bearer THE_SECRET" >/dev/null
+```
+
+The same code runs behind the Run buttons on the Sources screen, so a crawl
+started by hand and one started by cron behave identically.
+
+### What the crawler does to other people's servers
+
+robots.txt is fetched per origin and obeyed — a disallowed URL is not read, and
+the source records that as its error. Requests carry a user agent that names us
+and links to the site, time out at 15 seconds, stop at 5 MB, and venues are
+crawled one at a time rather than in parallel. The add-a-venue form refuses
+private and loopback addresses, so the crawler cannot be pointed at whatever
+the app server can reach on its own network.
