@@ -9,6 +9,7 @@ import {
 import { extract, isAiConfigured } from "@/lib/ai";
 
 import { fromJson, fromRss, textOf } from "./adapters";
+import { fetchRwa } from "./rwa";
 import { fetchDocument } from "./http";
 import type { NormalisedOffering } from "./types";
 
@@ -135,12 +136,16 @@ async function enrich(offerings: NormalisedOffering[]) {
 
 export async function crawlSource(source: Source): Promise<RunResult> {
 	try {
-		const body = await fetchDocument(source.url);
-
+		/*
+		 * The dev reader finds its own URL — the venue's deploy hash is in it —
+		 * so it does the fetching rather than being handed a document.
+		 */
 		const offerings =
-			source.kind === "rss"
-				? fromRss(body, source.mapping)
-				: fromJson(body, source.mapping);
+			source.kind === "rwa"
+				? await fetchRwa()
+				: source.kind === "rss"
+					? fromRss(await fetchDocument(source.url), source.mapping)
+					: fromJson(await fetchDocument(source.url), source.mapping);
 
 		if (offerings.length === 0) {
 			await recordRun(source.id, { status: "ok", count: 0 });

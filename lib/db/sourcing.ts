@@ -9,13 +9,15 @@ import type {
 
 import { query, transaction } from "./client";
 
+export type SourceKind = "json" | "rss" | "rwa";
+
 /* Reads and writes behind deal sourcing: venues, what they published, mandates. */
 
 export type Source = {
 	id: string;
 	slug: string;
 	label: string;
-	kind: "json" | "rss";
+	kind: SourceKind;
 	url: string;
 	mapping: Record<string, unknown>;
 	enabled: boolean;
@@ -42,7 +44,7 @@ export async function findSource(id: string) {
 export async function createSource(input: {
 	slug: string;
 	label: string;
-	kind: "json" | "rss";
+	kind: SourceKind;
 	url: string;
 	mapping: Record<string, unknown>;
 }) {

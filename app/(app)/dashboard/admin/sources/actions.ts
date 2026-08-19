@@ -10,6 +10,7 @@ import {
 	setSourceEnabled,
 } from "@/lib/db/sourcing";
 import { crawlAll, crawlSource } from "@/lib/sourcing/crawl";
+import { devSourcesEnabled } from "@/lib/sourcing/rwa";
 
 /*
  * Adding a venue means telling this server to go and fetch someone else's, on
@@ -37,7 +38,34 @@ export async function addSource(
 	const mappingText = String(formData.get("mapping") ?? "").trim();
 
 	if (!label) return { error: "Give the venue a name." };
-	if (kind !== "json" && kind !== "rss") return { error: "Unknown source kind." };
+
+	if (kind !== "json" && kind !== "rss" && kind !== "rwa") {
+		return { error: "Unknown source kind." };
+	}
+
+	/*
+	 * The reader knows its own address and is not configured with one, so it
+	 * skips the URL checks below. The flag is re-read here rather than trusted
+	 * from the form: a hidden option in the markup is not a permission.
+	 */
+	if (kind === "rwa") {
+		if (!devSourcesEnabled()) {
+			return { error: "Development sources are not enabled on this server." };
+		}
+
+		await createSource({
+			slug: "rwa-xyz-dev",
+			label,
+			kind,
+			url: "https://app.rwa.xyz/asset-screener",
+			mapping: {},
+		});
+
+		refresh();
+		return {
+			ok: `${label} added as a development source. It reads the site's own payload, not an API — see the note below.`,
+		};
+	}
 
 	let parsed: URL;
 

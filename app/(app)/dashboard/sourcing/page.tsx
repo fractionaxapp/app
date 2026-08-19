@@ -30,6 +30,14 @@ const stamp = new Intl.DateTimeFormat("en-GB", {
 
 const meta = "font-mono text-xs tracking-wide text-muted";
 
+/*
+ * Rows rendered per group. A real index is thousands of offerings, and putting
+ * all of them in one document is megabytes of HTML nobody scrolls. The count
+ * in the header is the true total and the footer says what was left out —
+ * a cap you cannot see reads as "this is everything".
+ */
+const PER_GROUP = 25;
+
 /* The criteria, said back in the same words a person would use. */
 function describe(criteria: Criteria): string[] {
 	const parts: string[] = [];
@@ -122,10 +130,18 @@ function Group({
 				{note}
 			</p>
 			<ul>
-				{matches.map((match) => (
+				{matches.slice(0, PER_GROUP).map((match) => (
 					<Result key={match.offering.id} match={match} />
 				))}
 			</ul>
+
+			{matches.length > PER_GROUP ? (
+				<p className="border-t border-border px-5 py-3 text-sm text-muted">
+					Showing {PER_GROUP} of {matches.length}. Narrow the mandate to see the
+					rest — a list this long usually means a criterion is missing rather
+					than that the market is this wide.
+				</p>
+			) : null}
 		</Panel>
 	);
 }

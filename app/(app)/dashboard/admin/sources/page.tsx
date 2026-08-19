@@ -6,6 +6,7 @@ import { isAiConfigured, aiModel } from "@/lib/ai";
 import { isDatabaseEnabled } from "@/lib/db/client";
 import { listSources, offeringStats } from "@/lib/db/sourcing";
 import { USER_AGENT } from "@/lib/sourcing/http";
+import { devSourcesEnabled } from "@/lib/sourcing/rwa";
 
 import { Panel } from "../../../_components/panel";
 
@@ -180,7 +181,7 @@ export default async function SourcesPage() {
 			</Panel>
 
 			<Panel title="Add a venue">
-				<SourceForm />
+				<SourceForm devEnabled={devSourcesEnabled()} />
 			</Panel>
 
 			<Panel title="How the crawler behaves">
@@ -202,6 +203,15 @@ export default async function SourcesPage() {
 						<dt className="fx-eyebrow w-40 text-muted">Limits</dt>
 						<dd className="text-pretty text-muted">
 							15 second timeout, 5 MB ceiling, venues crawled one at a time.
+						</dd>
+					</div>
+
+					<div className="flex flex-wrap gap-x-6 gap-y-1 border-b border-border py-3">
+						<dt className="fx-eyebrow w-40 text-muted">Development sources</dt>
+						<dd className="text-pretty text-muted">
+							{devSourcesEnabled()
+								? "ENABLE_DEV_SOURCES is on. The rwa.xyz reader is available: it reads that site's own page payload rather than a published API, from an aggregator rather than a venue, and it fills in no yield, term, seniority or coverage — those show as unverifiable. It is for building these screens against real rows, not for production."
+								: "Off. Set ENABLE_DEV_SOURCES=1 to enable the rwa.xyz reader while building these screens."}
 						</dd>
 					</div>
 

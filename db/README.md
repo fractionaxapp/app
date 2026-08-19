@@ -257,3 +257,29 @@ and links to the site, time out at 15 seconds, stop at 5 MB, and venues are
 crawled one at a time rather than in parallel. The add-a-venue form refuses
 private and loopback addresses, so the crawler cannot be pointed at whatever
 the app server can reach on its own network.
+
+### The development-only rwa.xyz reader
+
+`ENABLE_DEV_SOURCES=1` adds a source kind that reads the asset screener on
+app.rwa.xyz — about 1,300 tokenized assets, enough to build the sourcing
+screens against real rows instead of fixtures.
+
+It is not a production source, for three reasons worth keeping written down:
+
+- It reads the payload that site's own page loads, and the URL contains their
+  deploy hash. The reader discovers the hash per run rather than storing it, so
+  it survives their deploys, but it will break outright whenever they change
+  how the page is built — by design it fails loudly rather than serving a stale
+  index.
+- rwa.xyz publishes a documented, key-authenticated API. Their robots.txt does
+  permit this path — it disallows only `/admin/` and `/api/` — but robots is
+  not a licence, and going around a published API is not something to do on a
+  schedule in production.
+- They are an aggregator. An index built from this is a copy of theirs.
+
+The reader fills in no yield, term, seniority or coverage ratio. Those assets
+are open-ended funds with a redemption frequency rather than a maturity, and
+the one number that looks like a yield (`stats.return`) has no stated basis, so
+mapping it would put an indefensible figure in front of an investor. Every
+yield test against these rows reports "not published" instead, which is the
+honest answer and also a useful state to design against.

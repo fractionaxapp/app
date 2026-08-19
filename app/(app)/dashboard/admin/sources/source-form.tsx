@@ -18,7 +18,7 @@ const EXAMPLE = `{
   "minimum": "terms.min_investment"
 }`;
 
-export function SourceForm() {
+export function SourceForm({ devEnabled }: { devEnabled: boolean }) {
 	const [state, action, pending] = useActionState(addSource, initial);
 
 	return (
@@ -50,6 +50,7 @@ export function SourceForm() {
 					>
 						<option value="json">JSON</option>
 						<option value="rss">RSS</option>
+						{devEnabled ? <option value="rwa">rwa.xyz (dev)</option> : null}
 					</select>
 				</div>
 			</div>
@@ -62,10 +63,15 @@ export function SourceForm() {
 					id="source-url"
 					name="url"
 					type="url"
-					required
 					placeholder="https://venue.example/api/offerings"
 					className={`${fieldClass} mt-2`}
 				/>
+				{devEnabled ? (
+					<p className="mt-2 text-xs text-muted">
+						Not needed for the rwa.xyz reader — it finds its own, because the
+						address contains their deploy hash.
+					</p>
+				) : null}
 			</div>
 
 			<div>
