@@ -25,7 +25,7 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
 	// layout does not shift once it resolves.
 	if (!isReady) {
 		return (
-			<div className="flex-1 p-6">
+			<div className="min-h-0 flex-1 overflow-y-auto p-6">
 				<Loading />
 			</div>
 		);
@@ -33,7 +33,7 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
 
 	if (!isAuthenticated) {
 		return (
-			<div className="flex flex-1 items-center justify-center px-6 py-24">
+			<div className="flex min-h-0 flex-1 items-center justify-center overflow-y-auto px-6 py-24">
 				<div className="w-full max-w-md border border-border bg-surface">
 					<div className="flex items-center justify-between gap-4 border-b border-border px-5 py-3.5">
 						<p className="fx-eyebrow text-muted">Fractionax</p>
