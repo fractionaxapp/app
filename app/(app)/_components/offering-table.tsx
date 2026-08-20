@@ -72,10 +72,10 @@ const checkTone = {
 const meta = "font-mono text-xs tracking-wide text-muted";
 
 const COLUMNS =
-	"lg:grid-cols-[minmax(0,2.2fr)_minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,1fr)_7rem_8rem]";
+	"lg:grid-cols-[minmax(0,2.2fr)_minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,1fr)_7rem_8rem_5rem]";
 
 const BROWSE_COLUMNS =
-	"lg:grid-cols-[minmax(0,2.2fr)_minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,1fr)_7rem]";
+	"lg:grid-cols-[minmax(0,2.2fr)_minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,1fr)_7rem_5rem]";
 
 const stamp = new Intl.DateTimeFormat("en-GB", {
 	day: "numeric",
@@ -218,6 +218,18 @@ function Line({ match, showVerdict }: { match: Row; showVerdict: boolean }) {
 						{statusLabel[match.status]}
 					</span>
 				) : null}
+
+				{/*
+				 * Inside the summary, so it is there before the row is opened —
+				 * the way into the record used to be a link in the body, which you
+				 * could only find by expanding a row to look for it.
+				 */}
+				<Link
+					href={`/dashboard/offerings/${o.id}`}
+					className="fx-eyebrow justify-self-end border border-border px-2.5 py-1 text-muted transition-colors hover:border-primary hover:bg-primary hover:text-background"
+				>
+					Open
+				</Link>
 			</summary>
 
 			<div className="border-t border-border bg-surface-muted/40 px-5 py-5">
@@ -302,14 +314,6 @@ function Line({ match, showVerdict }: { match: Row; showVerdict: boolean }) {
 				<p
 					className={`mt-5 flex flex-wrap items-center gap-x-4 gap-y-1 ${meta}`}
 				>
-					{/* The row shows what fits a row; the record shows everything,
-					    including the venue's untouched payload. */}
-					<Link
-						href={`/dashboard/offerings/${o.id}`}
-						className="font-semibold text-primary underline underline-offset-4"
-					>
-						Full record →
-					</Link>
 					<span>{o.source_label}</span>
 					<span>first seen {stamp.format(o.first_seen)}</span>
 					<span>last seen {stamp.format(o.last_seen)}</span>
@@ -373,8 +377,16 @@ export function OfferingTable({
 				"Jurisdiction",
 				"Minimum",
 				"Verdict",
+				"Record",
 			]
-		: ["Offering", "Issuer", "Asset class", "Jurisdiction", "Minimum"];
+		: [
+				"Offering",
+				"Issuer",
+				"Asset class",
+				"Jurisdiction",
+				"Minimum",
+				"Record",
+			];
 
 	return (
 		<Panel
