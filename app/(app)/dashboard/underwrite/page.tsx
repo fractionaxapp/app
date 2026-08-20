@@ -48,6 +48,69 @@ const stamp = new Intl.DateTimeFormat("en-GB", {
 	year: "numeric",
 });
 
+/** Accept, watch or reject — the same controls whether or not one was used. */
+function Decide({
+	offeringId,
+	note,
+	decided = false,
+}: {
+	offeringId: string;
+	note: string | null;
+	decided?: boolean;
+}) {
+	return (
+		<form action={decide} className="flex flex-col gap-3">
+			<input type="hidden" name="offeringId" value={offeringId} />
+
+			<textarea
+				name="note"
+				rows={2}
+				maxLength={2000}
+				defaultValue={note ?? ""}
+				placeholder="Why — the part worth keeping"
+				className="w-full resize-y border border-border bg-background px-3 py-2 font-mono text-xs text-foreground placeholder:text-muted/50 focus-visible:border-primary focus-visible:outline-none"
+			/>
+
+			<div className="flex flex-wrap gap-2">
+				<button
+					type="submit"
+					name="verdict"
+					value="accepted"
+					className="fx-eyebrow min-h-9 cursor-pointer border border-primary/50 px-3 font-semibold text-primary transition-colors hover:border-primary hover:bg-primary hover:text-background"
+				>
+					Accept
+				</button>
+				<button
+					type="submit"
+					name="verdict"
+					value="watching"
+					className="fx-eyebrow min-h-9 cursor-pointer border border-border px-3 text-muted transition-colors hover:border-accent hover:text-accent"
+				>
+					Watch
+				</button>
+				<button
+					type="submit"
+					name="verdict"
+					value="rejected"
+					className="fx-eyebrow min-h-9 cursor-pointer border border-border px-3 text-muted transition-colors hover:border-danger hover:text-danger"
+				>
+					Reject
+				</button>
+				{decided ? (
+					<button
+						type="submit"
+						name="verdict"
+						value="clear"
+						className="fx-eyebrow min-h-9 cursor-pointer px-2 text-muted/70 transition-colors hover:text-foreground"
+					>
+						Undecide
+					</button>
+				) : null}
+			</div>
+		</form>
+	);
+}
+
 /*
  * Underwriting, as far as this data honestly goes.
  *
@@ -438,74 +501,61 @@ export default async function UnderwritePage({
 										</div>
 
 										<div className="min-w-0">
+											{/*
+											 * A decision that has been taken reads as one. Leaving
+											 * Accept, Watch and Reject sitting there afterwards makes a
+											 * settled row look like an open question, and the note —
+											 * the part worth keeping — was hidden inside a box you had
+											 * to notice was already filled in.
+											 *
+											 * Changing your mind stays possible, one fold away.
+											 */}
 											{offering.verdict ? (
-												<p className="mb-3 text-sm">
-													<span
-														className={`fx-eyebrow ${verdictTone[offering.verdict]}`}
-													>
-														{offering.verdict}
-													</span>
-													{offering.decided_at ? (
-														<span className={`ml-3 ${meta}`}>
-															{stamp.format(offering.decided_at)}
-														</span>
-													) : null}
-												</p>
-											) : null}
-
-											<form action={decide} className="flex flex-col gap-3">
-												<input
-													type="hidden"
-													name="offeringId"
-													value={offering.id}
-												/>
-
-												<textarea
-													name="note"
-													rows={2}
-													maxLength={2000}
-													defaultValue={offering.note ?? ""}
-													placeholder="Why — the part worth keeping"
-													className="w-full resize-y border border-border bg-background px-3 py-2 font-mono text-xs text-foreground placeholder:text-muted/50 focus-visible:border-primary focus-visible:outline-none"
-												/>
-
-												<div className="flex flex-wrap gap-2">
-													<button
-														type="submit"
-														name="verdict"
-														value="accepted"
-														className="fx-eyebrow min-h-9 cursor-pointer border border-primary/50 px-3 font-semibold text-primary transition-colors hover:border-primary hover:bg-primary hover:text-background"
-													>
-														Accept
-													</button>
-													<button
-														type="submit"
-														name="verdict"
-														value="watching"
-														className="fx-eyebrow min-h-9 cursor-pointer border border-border px-3 text-muted transition-colors hover:border-accent hover:text-accent"
-													>
-														Watch
-													</button>
-													<button
-														type="submit"
-														name="verdict"
-														value="rejected"
-														className="fx-eyebrow min-h-9 cursor-pointer border border-border px-3 text-muted transition-colors hover:border-danger hover:text-danger"
-													>
-														Reject
-													</button>
-													{offering.verdict ? (
-														<button
-															type="submit"
-															name="verdict"
-															value="clear"
-															className="fx-eyebrow min-h-9 cursor-pointer px-2 text-muted/70 transition-colors hover:text-foreground"
+												<div className="flex flex-col gap-3">
+													<p className="flex flex-wrap items-baseline gap-x-3">
+														<span
+															className={`fx-eyebrow ${verdictTone[offering.verdict]}`}
 														>
-															Undecide
-														</button>
-													) : null}
+															{offering.verdict}
+														</span>
+														{offering.decided_at ? (
+															<span className={meta}>
+																{stamp.format(offering.decided_at)}
+															</span>
+														) : null}
+													</p>
+
+													{offering.note ? (
+														<p className="border-l-2 border-border pl-3 text-sm text-pretty text-muted">
+															{offering.note}
+														</p>
+													) : (
+														<p className={meta}>No reasoning recorded.</p>
+													)}
+
+													<details className="group">
+														<summary className="fx-eyebrow flex cursor-pointer list-none items-center gap-2 text-muted/70 transition-colors hover:text-foreground [&::-webkit-details-marker]:hidden">
+															<span
+																aria-hidden
+																className="inline-block transition-transform group-open:rotate-90"
+															>
+																›
+															</span>
+															Change this
+														</summary>
+
+														<div className="mt-3">
+															<Decide
+																offeringId={offering.id}
+																note={offering.note}
+																decided
+															/>
+														</div>
+													</details>
 												</div>
-											</form>
+											) : (
+												<Decide offeringId={offering.id} note={offering.note} />
+											)}
 										</div>
 									</div>
 
