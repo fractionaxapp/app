@@ -240,11 +240,38 @@ curl -X POST https://fractionax.app/api/cron/crawl \
   -H "Authorization: Bearer $CRON_SECRET"
 ```
 
-Hourly from cron on the droplet:
+Hourly from cron on the droplet, through the wrapper so the secret stays in
+one place and `crontab -l` does not print it:
 
 ```cron
-17 * * * * curl -fsS -X POST http://127.0.0.1:3000/api/cron/crawl -H "Authorization: Bearer THE_SECRET" >/dev/null
+17 * * * * /srv/app/scripts/crawl.sh >> /var/log/fractionax-crawl.log 2>&1
 ```
+
+### Scheduling it on a Mac
+
+cron will not work if the project lives under Desktop, Documents or Downloads.
+macOS refuses background jobs access to those directories without Full Disk
+Access, and the job dies with `Operation not permitted` before it reads
+anything — which is what happened here.
+
+A LaunchAgent avoids the problem by never touching the project: the crawl is a
+POST to localhost, so the secret can live in the agent instead of being read
+from `.env.local`.
+
+```bash
+launchctl load ~/Library/LaunchAgents/app.fractionax.crawl.plist
+launchctl start app.fractionax.crawl          # run it now
+tail ~/Library/Logs/fractionax-crawl.log      # what it did
+launchctl unload ~/Library/LaunchAgents/app.fractionax.crawl.plist   # stop it
+```
+
+It fires at seventeen minutes past the hour, and only does anything while the
+app is running on port 3000 — a laptop is asleep most of the time, so treat it
+as opportunistic rather than as a schedule. The droplet is where the crawl
+becomes reliable.
+
+Rotating `CRON_SECRET` means changing it in two places: `.env.local`, and the
+agent's `EnvironmentVariables`.
 
 The same code runs behind the Run buttons on the Sources screen, so a crawl
 started by hand and one started by cron behave identically.
