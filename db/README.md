@@ -283,3 +283,51 @@ the one number that looks like a yield (`stats.return`) has no stated basis, so
 mapping it would put an indefensible figure in front of an investor. Every
 yield test against these rows reports "not published" instead, which is the
 honest answer and also a useful state to design against.
+
+### Reading a Next.js page's data
+
+Sites built on Next.js serve the JSON their own pages load from
+`/_next/data/<buildId>/<route>.json`. The build id changes on every deploy, so
+the `nextdata` source kind takes the **page** address and reads the id out of
+the page on each run. A source configured this way keeps working after the site
+ships a new build, with no config to update.
+
+rwa.xyz's asset screener, which is about 1,300 tokenized assets:
+
+```sql
+INSERT INTO sources (slug, label, kind, url, mapping) VALUES (
+  'rwa-screener', 'RWA.xyz asset screener', 'nextdata',
+  'https://app.rwa.xyz/asset-screener',
+  '{"items":"pageProps.assets",
+    "externalId":"id",
+    "title":"name",
+    "url":"website",
+    "issuer":"manager.name",
+    "assetClass":"assetClass.name",
+    "jurisdiction":"jurisdiction.name",
+    "currency":"minInvestment.currency",
+    "minimum":"minInvestment.amount"}'::jsonb);
+```
+
+Note what is *not* mapped: yield, term, seniority and coverage. These are
+open-ended funds with a redemption frequency rather than a maturity, and the
+one number that looks like a yield (`stats.return`) has no stated basis. Those
+fields stay null and every test against them reports "not published", which is
+the honest answer.
+
+The same caveats as ever apply to reading a site this way: rwa.xyz publishes a
+documented, key-authenticated API, their robots.txt permits this path but
+robots is not a licence, and an index built from an aggregator is a copy of
+theirs. The older dev-gated `rwa` kind does the same thing behind
+ENABLE_DEV_SOURCES; `nextdata` is the configurable version and the one to use.
+
+### Letting the model read prose
+
+A source whose mapping contains `"extract": true` has its unmapped fields read
+out of the offering's own text by the model, for up to 25 offerings per run.
+
+Leave it off unless that text really does describe terms. Turned on against an
+aggregator carrying marketing copy, the model returned a term and a seniority
+for a treasury money market fund — a product that has neither — and "senior
+secured" on a fund share would have passed a senior-secured-only mandate. The
+prompt says to omit what is not stated; a blurb effectively states it.

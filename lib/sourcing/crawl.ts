@@ -8,7 +8,8 @@ import {
 } from "@/lib/db/sourcing";
 import { extract, isAiConfigured } from "@/lib/ai";
 
-import { fromJson, fromRss, textOf } from "./adapters";
+import { fromJson, fromPayload, fromRss, textOf } from "./adapters";
+import { fetchNextData } from "./nextdata";
 import { fetchRwa } from "./rwa";
 import { fetchDocument } from "./http";
 import type { NormalisedOffering } from "./types";
@@ -36,6 +37,17 @@ export type RunResult = {
  * offerings the mapping could not fill in, and only up to a cap, because it is
  * one model call per offering and an unbounded crawl would be an unbounded
  * bill.
+ *
+ * Off unless the source asks for it, and that default was bought the hard way.
+ * Run against an aggregator whose payload carries marketing copy, the model
+ * returned a term and a seniority for a treasury money market fund — a product
+ * that has neither — and "senior secured" on a fund share would have passed a
+ * senior-secured-only mandate. The prompt says to omit what is not stated; the
+ * blurb effectively states it.
+ *
+ * So the operator has to say that a source's prose actually describes terms,
+ * by putting "extract": true in its mapping. Where that is not true, fields
+ * stay null and show as unverifiable, which is the honest answer.
  */
 const EXTRACT_LIMIT = 25;
 
@@ -93,8 +105,8 @@ function needsEnrichment(offering: NormalisedOffering) {
 	);
 }
 
-async function enrich(offerings: NormalisedOffering[]) {
-	if (!isAiConfigured()) return 0;
+async function enrich(offerings: NormalisedOffering[], opted: boolean) {
+	if (!opted || !isAiConfigured()) return 0;
 
 	let used = 0;
 
@@ -145,16 +157,21 @@ export async function crawlSource(source: Source): Promise<RunResult> {
 		const offerings =
 			source.kind === "rwa"
 				? await fetchRwa()
-				: source.kind === "rss"
-					? fromRss(await fetchDocument(source.url), source.mapping)
-					: fromJson(await fetchDocument(source.url), source.mapping);
+				: source.kind === "nextdata"
+					? fromPayload(
+							await fetchNextData({ page: source.url }),
+							source.mapping,
+						)
+					: source.kind === "rss"
+						? fromRss(await fetchDocument(source.url), source.mapping)
+						: fromJson(await fetchDocument(source.url), source.mapping);
 
 		if (offerings.length === 0) {
 			await recordRun(source.id, { status: "ok", count: 0 });
 			return { source: source.label, status: "ok", stored: 0, withdrawn: 0 };
 		}
 
-		const enriched = await enrich(offerings);
+		const enriched = await enrich(offerings, source.mapping.extract === true);
 		const { stored, withdrawn } = await upsertOfferings(source.id, offerings);
 
 		await recordRun(source.id, { status: "ok", count: stored });

@@ -9,7 +9,7 @@ import type {
 
 import { query, transaction } from "./client";
 
-export type SourceKind = "json" | "rss" | "rwa";
+export type SourceKind = "json" | "rss" | "rwa" | "nextdata";
 
 /* Reads and writes behind deal sourcing: venues, what they published, mandates. */
 

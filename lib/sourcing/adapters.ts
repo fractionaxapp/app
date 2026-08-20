@@ -156,6 +156,14 @@ export function fromJson(body: string, mapping: Mapping): NormalisedOffering[] {
 		throw new Error("response was not valid JSON");
 	}
 
+	return fromPayload(payload, mapping);
+}
+
+/** The mapping half, for callers that already hold a parsed payload. */
+export function fromPayload(
+	payload: unknown,
+	mapping: Mapping,
+): NormalisedOffering[] {
 	const itemsPath =
 		typeof mapping.items === "string" ? mapping.items : undefined;
 

@@ -219,7 +219,7 @@ export default async function SourcesPage() {
 						<dt className="fx-eyebrow w-40 text-muted">Reading prose</dt>
 						<dd className="text-pretty text-muted">
 							{isAiConfigured()
-								? `${aiDescription()} fills in fields a feed only states in words, for up to 25 offerings per run. It is told to omit anything the offering does not state, and whichever provider answered is recorded against the result.`
+								? `${aiDescription()} can fill in fields a feed only states in words, for up to 25 offerings per run — but only for a source whose mapping sets "extract": true. Off elsewhere: run against marketing copy it returns a term and a seniority for products that have neither.`
 								: "Not configured. Fields a venue only states in prose stay null and show as unverifiable. Set ANTHROPIC_API_KEY or MINIMAX_API_KEY to have a model read them."}
 						</dd>
 					</div>

@@ -1,6 +1,6 @@
 import "server-only";
 
-import { fetchDocument } from "./http";
+import { fetchNextData } from "./nextdata";
 import type { NormalisedOffering } from "./types";
 
 /*
@@ -10,7 +10,7 @@ import type { NormalisedOffering } from "./types";
  * loads, which means three things worth stating plainly rather than burying:
  *
  *   1. The URL contains their deploy hash, so it changes every time they ship.
- *      That is why the build id is discovered per run instead of configured —
+ *      The id is discovered per run (see nextdata.ts) instead of configured —
  *      a hash in a config row would be stale within days.
  *   2. rwa.xyz publishes a documented, key-authenticated API. Reading the
  *      app's internal payload instead is going around the front door. Their
@@ -60,26 +60,6 @@ type Asset = {
 	stats?: Record<string, unknown> | null;
 };
 
-/**
- * The deploy hash, read from the page that uses it.
- *
- * Fetched fresh on every run. If they change how the page embeds it this
- * throws, the source turns red on the Sources screen, and nothing silently
- * carries on against a stale index — which is the failure mode that matters.
- */
-async function buildId(): Promise<string> {
-	const html = await fetchDocument(PAGE);
-	const match = html.match(/"buildId":"([^"]{4,64})"/);
-
-	if (!match) {
-		throw new Error(
-			"could not find buildId on the asset screener page — the dev adapter needs updating",
-		);
-	}
-
-	return match[1];
-}
-
 export async function fetchRwa(): Promise<NormalisedOffering[]> {
 	if (!devSourcesEnabled()) {
 		throw new Error(
@@ -87,18 +67,9 @@ export async function fetchRwa(): Promise<NormalisedOffering[]> {
 		);
 	}
 
-	const id = await buildId();
-	const body = await fetchDocument(
-		`https://app.rwa.xyz/_next/data/${id}/asset-screener.json`,
-	);
-
-	let payload: { pageProps?: { assets?: unknown } };
-
-	try {
-		payload = JSON.parse(body) as typeof payload;
-	} catch {
-		throw new Error("asset screener payload was not valid JSON");
-	}
+	const payload = (await fetchNextData({ page: PAGE })) as {
+		pageProps?: { assets?: unknown };
+	};
 
 	const assets = payload.pageProps?.assets;
 

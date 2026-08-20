@@ -57,6 +57,7 @@ export function SourceForm({ devEnabled }: { devEnabled: boolean }) {
 					>
 						<option value="json">JSON</option>
 						<option value="rss">RSS</option>
+						<option value="nextdata">Next.js page</option>
 						{devEnabled ? <option value="rwa">rwa.xyz (dev)</option> : null}
 					</select>
 				</div>
@@ -101,6 +102,12 @@ export function SourceForm({ devEnabled }: { devEnabled: boolean }) {
 					Where each field lives in their payload. Left empty, the adapter tries
 					the obvious names — title, yield, term, minimum — and leaves the rest
 					null, which shows up as unverifiable rather than as a guess.
+				</p>
+
+				<p className="mt-2 text-xs text-pretty text-muted">
+					For a Next.js page, give the page address itself. The deploy hash in
+					its data URL is read from the page on every run, so the source keeps
+					working after the site ships a new build.
 				</p>
 			</div>
 

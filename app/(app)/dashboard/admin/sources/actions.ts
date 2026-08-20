@@ -56,7 +56,12 @@ export async function addSource(
 
 	if (!label) return reject("Give the venue a name.");
 
-	if (kind !== "json" && kind !== "rss" && kind !== "rwa") {
+	if (
+		kind !== "json" &&
+		kind !== "rss" &&
+		kind !== "rwa" &&
+		kind !== "nextdata"
+	) {
 		return reject("Unknown source kind.");
 	}
 
