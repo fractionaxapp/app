@@ -13,6 +13,7 @@ import { decisionCounts } from "@/lib/db/underwriting";
 import { findUserByPrivyDid } from "@/lib/db/users";
 import { runMandate } from "@/lib/sourcing/match";
 
+import { SessionExpired } from "../_components/session-expired";
 import { Panel } from "../_components/panel";
 import { Waitlist } from "../_components/waitlist";
 
@@ -46,7 +47,9 @@ export default async function DashboardPage() {
 
 	// AuthGate renders the sign-in screen in this case; this is belt and braces
 	// for a session that expires between the gate and this render.
-	if (access.state === "signed-out") return null;
+	// The browser thinks it is signed in and this server disagrees; say so
+	// rather than rendering an empty page inside working chrome.
+	if (access.state === "signed-out") return <SessionExpired />;
 
 	if (access.state === "waiting") return <Waitlist access={access} />;
 

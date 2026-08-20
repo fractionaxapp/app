@@ -7,6 +7,7 @@ import { isDatabaseEnabled } from "@/lib/db/client";
 import { findOffering } from "@/lib/db/sourcing";
 
 import { Artwork } from "../../../_components/artwork";
+import { SessionExpired } from "../../../_components/session-expired";
 import { Panel } from "../../../_components/panel";
 
 export const metadata: Metadata = { title: "Offering" };
@@ -511,7 +512,9 @@ export default async function OfferingPage({
 }) {
 	const access = await getAccess();
 
-	if (access.state === "signed-out") return null;
+	// The browser thinks it is signed in and this server disagrees; say so
+	// rather than rendering an empty page inside working chrome.
+	if (access.state === "signed-out") return <SessionExpired />;
 	if (access.state === "waiting") redirect("/dashboard");
 
 	if (!isDatabaseEnabled) notFound();

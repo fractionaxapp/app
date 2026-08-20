@@ -15,6 +15,7 @@ import { findUserByPrivyDid } from "@/lib/db/users";
 import { runMandate, type Match } from "@/lib/sourcing/match";
 import type { Criteria, Mandate } from "@/lib/sourcing/types";
 
+import { SessionExpired } from "../../_components/session-expired";
 import { Panel } from "../../_components/panel";
 
 import { dropMandate } from "./actions";
@@ -179,7 +180,9 @@ export default async function SourcingPage({
 }) {
 	const access = await getAccess();
 
-	if (access.state === "signed-out") return null;
+	// The browser thinks it is signed in and this server disagrees; say so
+	// rather than rendering an empty page inside working chrome.
+	if (access.state === "signed-out") return <SessionExpired />;
 	if (access.state === "waiting") redirect("/dashboard");
 
 	if (!isDatabaseEnabled) {

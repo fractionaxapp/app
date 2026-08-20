@@ -11,6 +11,7 @@ import { assess } from "@/lib/sourcing/assess";
 import { runMandate } from "@/lib/sourcing/match";
 
 import { Artwork } from "../../_components/artwork";
+import { SessionExpired } from "../../_components/session-expired";
 import { Panel } from "../../_components/panel";
 
 import { decide } from "./actions";
@@ -138,7 +139,9 @@ export default async function UnderwritePage({
 }) {
 	const access = await getAccess();
 
-	if (access.state === "signed-out") return null;
+	// The browser thinks it is signed in and this server disagrees; say so
+	// rather than rendering an empty page inside working chrome.
+	if (access.state === "signed-out") return <SessionExpired />;
 	if (access.state === "waiting") redirect("/dashboard");
 
 	if (!isDatabaseEnabled) {

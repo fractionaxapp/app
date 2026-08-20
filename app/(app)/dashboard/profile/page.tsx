@@ -5,6 +5,7 @@ import { getAccess } from "@/lib/access";
 import { findProfileByPrivyDid } from "@/lib/db/users";
 
 import { NotSet, Panel, Row } from "../../_components/panel";
+import { SessionExpired } from "../../_components/session-expired";
 
 export const metadata: Metadata = { title: "Profile" };
 
@@ -43,7 +44,9 @@ function shorten(address: string) {
 export default async function ProfilePage() {
 	const access = await getAccess();
 
-	if (access.state === "signed-out") return null;
+	// The browser thinks it is signed in and this server disagrees; say so
+	// rather than rendering an empty page inside working chrome.
+	if (access.state === "signed-out") return <SessionExpired />;
 	// Unapproved accounts get the queue screen, not a profile.
 	if (access.state === "waiting") redirect("/dashboard");
 

@@ -6,6 +6,7 @@ import { findProfileByPrivyDid } from "@/lib/db/users";
 
 import { NotSet, Panel, Row } from "../../_components/panel";
 import { SignOutButton } from "../../_components/sign-out-button";
+import { SessionExpired } from "../../_components/session-expired";
 
 export const metadata: Metadata = { title: "Settings" };
 
@@ -21,7 +22,9 @@ export const metadata: Metadata = { title: "Settings" };
 export default async function SettingsPage() {
 	const access = await getAccess();
 
-	if (access.state === "signed-out") return null;
+	// The browser thinks it is signed in and this server disagrees; say so
+	// rather than rendering an empty page inside working chrome.
+	if (access.state === "signed-out") return <SessionExpired />;
 	if (access.state === "waiting") redirect("/dashboard");
 
 	const profile = await findProfileByPrivyDid(access.did);

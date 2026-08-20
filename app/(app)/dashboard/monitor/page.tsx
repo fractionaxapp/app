@@ -8,6 +8,7 @@ import { changesFor, listFollowed, type Change } from "@/lib/db/monitor";
 import { findUserByPrivyDid } from "@/lib/db/users";
 
 import { Artwork } from "../../_components/artwork";
+import { SessionExpired } from "../../_components/session-expired";
 import { Panel } from "../../_components/panel";
 
 export const metadata: Metadata = { title: "Monitor" };
@@ -121,7 +122,9 @@ function ChangeLine({ change }: { change: Change }) {
 export default async function MonitorPage() {
 	const access = await getAccess();
 
-	if (access.state === "signed-out") return null;
+	// The browser thinks it is signed in and this server disagrees; say so
+	// rather than rendering an empty page inside working chrome.
+	if (access.state === "signed-out") return <SessionExpired />;
 	if (access.state === "waiting") redirect("/dashboard");
 
 	if (!isDatabaseEnabled) {
