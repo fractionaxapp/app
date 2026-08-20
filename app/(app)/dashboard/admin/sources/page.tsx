@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
 import { getAdmin } from "@/lib/admin";
-import { isAiConfigured, aiModel } from "@/lib/ai";
+import { aiDescription, isAiConfigured } from "@/lib/ai";
 import { isDatabaseEnabled } from "@/lib/db/client";
 import { listSources, offeringStats } from "@/lib/db/sourcing";
 import { USER_AGENT } from "@/lib/sourcing/http";
@@ -219,8 +219,8 @@ export default async function SourcesPage() {
 						<dt className="fx-eyebrow w-40 text-muted">Reading prose</dt>
 						<dd className="text-pretty text-muted">
 							{isAiConfigured()
-								? `${aiModel()} fills in fields a feed only states in words, for up to 25 offerings per run. It is told to omit anything the offering does not state.`
-								: "Not configured. Fields a venue only states in prose stay null and show as unverifiable. Set ANTHROPIC_API_KEY to have the model read them."}
+								? `${aiDescription()} fills in fields a feed only states in words, for up to 25 offerings per run. It is told to omit anything the offering does not state, and whichever provider answered is recorded against the result.`
+								: "Not configured. Fields a venue only states in prose stay null and show as unverifiable. Set ANTHROPIC_API_KEY or MINIMAX_API_KEY to have a model read them."}
 						</dd>
 					</div>
 				</dl>

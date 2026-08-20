@@ -117,18 +117,20 @@ async function enrich(offerings: NormalisedOffering[]) {
 
 		if (!parsed) continue;
 
+		const fields = parsed.value;
+
 		// The mapping wins wherever it produced a value: a field the venue
 		// published in a structured form is better evidence than one read out
 		// of its prose.
-		offering.issuer ??= parsed.issuer ?? null;
-		offering.assetClass ??= parsed.assetClass ?? null;
-		offering.currency ??= parsed.currency ?? null;
-		offering.netYield ??= parsed.netYield ?? null;
-		offering.termMonths ??= parsed.termMonths ?? null;
-		offering.seniority ??= parsed.seniority ?? null;
-		offering.minimum ??= parsed.minimum ?? null;
-		offering.jurisdiction ??= parsed.jurisdiction ?? null;
-		offering.dscr ??= parsed.dscr ?? null;
+		offering.issuer ??= fields.issuer ?? null;
+		offering.assetClass ??= fields.assetClass ?? null;
+		offering.currency ??= fields.currency ?? null;
+		offering.netYield ??= fields.netYield ?? null;
+		offering.termMonths ??= fields.termMonths ?? null;
+		offering.seniority ??= fields.seniority ?? null;
+		offering.minimum ??= fields.minimum ?? null;
+		offering.jurisdiction ??= fields.jurisdiction ?? null;
+		offering.dscr ??= fields.dscr ?? null;
 	}
 
 	return used;

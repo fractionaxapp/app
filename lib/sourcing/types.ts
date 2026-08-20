@@ -78,7 +78,7 @@ export type Mandate = {
 	user_id: string;
 	statement: string;
 	criteria: Criteria;
-	parsed_by: "claude" | "rules";
+	parsed_by: "claude" | "minimax" | "rules";
 	created_at: Date;
 	archived_at: Date | null;
 };

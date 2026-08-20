@@ -44,7 +44,7 @@ export function MandateForm({ aiEnabled }: { aiEnabled: boolean }) {
 				sizes as amounts.{" "}
 				{aiEnabled
 					? "Read by the model, and you can see what it understood before anything runs."
-					: "Read by the built-in parser — set ANTHROPIC_API_KEY for the model to read it instead."}
+					: "Read by the built-in parser — set ANTHROPIC_API_KEY or MINIMAX_API_KEY for a model to read it instead."}
 			</p>
 
 			{state.error ? (

@@ -72,6 +72,13 @@ function describe(criteria: Criteria): string[] {
 	return parts;
 }
 
+/* Attribution, in the words a person would use for each. */
+const readBy: Record<string, string> = {
+	claude: "Claude",
+	minimax: "MiniMax",
+	rules: "the built-in parser",
+};
+
 const tone = {
 	pass: "text-primary",
 	fail: "text-danger",
@@ -286,9 +293,7 @@ export default async function SourcingPage({
 
 									<p className={`mt-2 ${meta}`}>
 										{stamp.format(mandate.created_at)} · read by{" "}
-										{mandate.parsed_by === "claude"
-											? "the model"
-											: "the built-in parser"}
+										{readBy[mandate.parsed_by] ?? mandate.parsed_by}
 									</p>
 								</li>
 							);

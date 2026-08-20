@@ -1,6 +1,6 @@
 import "server-only";
 
-import { extract, isAiConfigured } from "@/lib/ai";
+import { extract, isAiConfigured, type ProviderName } from "@/lib/ai";
 
 import type { Criteria } from "./types";
 
@@ -220,12 +220,16 @@ export function parseWithRules(statement: string): Criteria {
 	return sanitise(raw);
 }
 
-export type ParseResult = { criteria: Criteria; parsedBy: "claude" | "rules" };
+export type ParsedBy = ProviderName | "rules";
+
+export type ParseResult = { criteria: Criteria; parsedBy: ParsedBy };
 
 /**
- * Parse a mandate, preferring the model and falling back to the rules. The
- * caller is told which ran so the screen can say so — a criterion nobody typed
- * needs to be attributable.
+ * Parse a mandate, preferring the model and falling back to the rules.
+ *
+ * The caller is told which one ran — including which provider, when more than
+ * one is configured. A criterion nobody typed needs to be attributable to the
+ * thing that invented it.
  */
 export async function parseMandate(statement: string): Promise<ParseResult> {
 	const trimmed = statement.trim().slice(0, 2000);
@@ -240,7 +244,9 @@ export async function parseMandate(statement: string): Promise<ParseResult> {
 			prompt: trimmed,
 		});
 
-		if (parsed) return { criteria: sanitise(parsed), parsedBy: "claude" };
+		if (parsed) {
+			return { criteria: sanitise(parsed.value), parsedBy: parsed.provider };
+		}
 	}
 
 	return { criteria: parseWithRules(trimmed), parsedBy: "rules" };

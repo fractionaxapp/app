@@ -228,7 +228,7 @@ export async function createMandate(input: {
 	userId: string;
 	statement: string;
 	criteria: Criteria;
-	parsedBy: "claude" | "rules";
+	parsedBy: "claude" | "minimax" | "rules";
 }) {
 	const rows = await query<{ id: string }>(
 		`INSERT INTO mandates (user_id, statement, criteria, parsed_by)
