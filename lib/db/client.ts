@@ -49,6 +49,9 @@ function createPool() {
 		max: Number(process.env.DATABASE_POOL_MAX ?? 10),
 		idleTimeoutMillis: 30_000,
 		connectionTimeoutMillis: 10_000,
+		// Stops a NAT or load balancer silently dropping a pooled connection
+		// and handing it back later as a dead one.
+		keepAlive: true,
 	});
 }
 
@@ -60,20 +63,79 @@ export function getPool(): Pool {
 	return globalForDb.pool;
 }
 
+/*
+ * Connection failures arrive as a bare "Connection terminated due to
+ * connection timeout" pointing at whichever line happened to run the query,
+ * which says nothing about the cause. Reaching Postgres at all is a different
+ * problem from a query being wrong, and it deserves to read like one.
+ *
+ * The host is named; the URL never is, because it carries the password.
+ */
+const CONNECTION_FAILURES = [
+	"Connection terminated due to connection timeout",
+	"timeout expired",
+	"Connection terminated unexpectedly",
+	"ECONNREFUSED",
+	"ETIMEDOUT",
+	"ENOTFOUND",
+	"EHOSTUNREACH",
+	"ENETUNREACH",
+];
+
+function describeFailure(error: unknown) {
+	if (!(error instanceof Error)) return error;
+
+	const failed = CONNECTION_FAILURES.some(
+		(needle) =>
+			error.message.includes(needle) ||
+			(error as NodeJS.ErrnoException).code === needle,
+	);
+
+	if (!failed) return error;
+
+	let where = "the configured host";
+
+	try {
+		const url = new URL(connectionString ?? "");
+		where = `${url.hostname}:${url.port || "5432"}`;
+	} catch {
+		// Leave the generic description; a malformed URL is its own problem.
+	}
+
+	return new Error(
+		`Cannot reach Postgres at ${where} — ${error.message}.\n` +
+			"The database may be asleep or unreachable. If plain HTTPS to that host " +
+			"works but this does not, the Postgres port is being blocked on this " +
+			"network rather than by the database: try another network, or point " +
+			"DATABASE_URL at a local Postgres for development.",
+		{ cause: error },
+	);
+}
+
 /** Run a parameterised query. Never interpolate values into the SQL string. */
 export async function query<T extends Record<string, unknown>>(
 	text: string,
 	params?: unknown[],
 ) {
-	const result = await getPool().query<T>(text, params);
-	return result.rows;
+	try {
+		const result = await getPool().query<T>(text, params);
+		return result.rows;
+	} catch (error) {
+		throw describeFailure(error);
+	}
 }
 
 /** Run several statements in one transaction, rolling back on any error. */
 export async function transaction<T>(
 	fn: (client: import("pg").PoolClient) => Promise<T>,
 ): Promise<T> {
-	const client = await getPool().connect();
+	let client;
+
+	try {
+		client = await getPool().connect();
+	} catch (error) {
+		throw describeFailure(error);
+	}
 
 	try {
 		await client.query("BEGIN");
@@ -81,8 +143,10 @@ export async function transaction<T>(
 		await client.query("COMMIT");
 		return result;
 	} catch (error) {
-		await client.query("ROLLBACK");
-		throw error;
+		// Best effort: if the connection is what failed, the rollback fails too,
+		// and the original error is the one worth surfacing.
+		await client.query("ROLLBACK").catch(() => {});
+		throw describeFailure(error);
 	} finally {
 		client.release();
 	}
