@@ -288,29 +288,7 @@ function isLeaf(value: unknown) {
 	return value === null || value === undefined || typeof value !== "object";
 }
 
-/** key: value, in a grid that fits several to a row. */
-function Pair({
-	name,
-	value,
-	reading,
-}: {
-	name: string;
-	value: unknown;
-	/** What we made of this key, if anything. */
-	reading?: string;
-}) {
-	return (
-		<div className="min-w-0">
-			<dt className={`flex flex-wrap items-baseline gap-x-2 ${meta}`}>
-				{name}
-				{reading ? <span className="text-primary/80">→ {reading}</span> : null}
-			</dt>
-			<dd className="mt-1 font-mono text-sm break-words">
-				<Leaf value={value} name={name} />
-			</dd>
-		</div>
-	);
-}
+/*
 
 /*
  * The venue's own record, rendered as it arrived.
@@ -325,161 +303,159 @@ function Pair({
  * are now a grid you can scan, and each nested object or list is a titled
  * block of its own.
  */
-function Nested({
-	value,
-	reading,
+/*
+ * The venue's own record, rendered as it arrived.
+ *
+ * Every field above this is our reading of it — a path we chose, a number we
+ * coerced. Keeping the source underneath means a figure that looks wrong can
+ * be checked against what was published without opening a database, and a
+ * field we never mapped is still there for whoever needs it.
+ *
+ * One alignment for the whole thing: key on the left, value on the right, a
+ * hairline between rows, nesting shown by indenting the key rather than by
+ * starting a fresh grid. Laying the plain fields out three to a row read as
+ * compact and scanned as chaos — values wrap to different heights, so no two
+ * rows lined up and every nested block set its own columns a few pixels off
+ * the ones above it.
+ */
+type RowModel = {
+	path: string;
+	name: string;
+	depth: number;
+	/** Rendered on the right. Absent for a heading that only opens a group. */
+	value?: React.ReactNode;
+	/** Muted note where a value would go: a count, or "empty". */
+	note?: string;
+};
+
+function rowsFor(
+	value: unknown,
+	reading: Map<string, string>,
+	name = "",
 	path = "",
 	depth = 0,
-}: {
-	value: unknown;
-	reading: Map<string, string>;
-	/** Dotted path to this node, matched against the source's mapping. */
-	path?: string;
-	depth?: number;
-}) {
-	// Deeper than any venue payload seen so far, and a guard against one that
-	// contains itself.
-	if (depth > 4) return <p className="text-sm text-muted/50">…</p>;
+): RowModel[] {
+	const row = (extra: Partial<RowModel>): RowModel => ({
+		path,
+		name,
+		depth,
+		...extra,
+	});
+
+	if (isLeaf(value)) {
+		return [row({ value: <Leaf value={value} name={name} /> })];
+	}
 
 	if (Array.isArray(value)) {
-		if (value.length === 0)
-			return <p className="text-sm text-muted/50">empty</p>;
+		if (value.length === 0) return [row({ note: "empty" })];
 
 		const entities = value.map(asEntity);
 
+		// A list of named things is one row of chips, not one row per thing.
 		if (entities.every((entity) => entity !== null)) {
-			return (
-				<ul className="flex flex-wrap gap-2">
-					{(entities as Entity[]).map((entity, index) => (
-						<li key={index}>
-							<EntityChip entity={entity} />
-							{entity.rest.length > 0 ? (
-								<dl className="mt-2 flex flex-wrap gap-x-5 gap-y-1">
-									{entity.rest.map(([key, entry]) => (
-										<span key={key} className={`flex gap-2 ${meta}`}>
-											{key}
-											<span className="text-foreground">
-												<Leaf value={entry} name={key} />
-											</span>
-										</span>
-									))}
-								</dl>
-							) : null}
-						</li>
-					))}
-				</ul>
-			);
+			return [
+				row({
+					value: (
+						<span className="flex flex-wrap gap-2">
+							{(entities as Entity[]).map((entity, index) => (
+								<EntityChip key={index} entity={entity} />
+							))}
+						</span>
+					),
+				}),
+			];
 		}
 
-		return (
-			<ol className="flex flex-col gap-3">
-				{value.map((entry, index) => (
-					<li key={index} className="min-w-0">
-						{isLeaf(entry) ? (
-							<span className="font-mono text-sm">
-								<Leaf value={entry} name="" />
-							</span>
-						) : (
-							<Nested
-								value={entry}
-								reading={reading}
-								path={path}
-								depth={depth + 1}
-							/>
-						)}
-					</li>
-				))}
-			</ol>
-		);
+		if (value.every(isLeaf)) {
+			return [
+				row({
+					value: (
+						<span className="flex flex-col gap-1">
+							{value.map((entry, index) => (
+								<Leaf key={index} value={entry} name={name} />
+							))}
+						</span>
+					),
+				}),
+			];
+		}
+
+		return [
+			row({ note: `${value.length} items` }),
+			...value.flatMap((entry, index) =>
+				rowsFor(entry, reading, String(index), path, depth + 1),
+			),
+		];
 	}
 
-	if (isLeaf(value)) {
-		return (
-			<span className="font-mono text-sm">
-				<Leaf value={value} name="" />
-			</span>
-		);
+	/*
+	 * Not at the root. The record as a whole has a name and an icon, so it
+	 * matches the same test a chain does — but drawing it as a chip swallows
+	 * those two keys into an unlabelled row, and they are fields like any
+	 * other here.
+	 */
+	const entity = depth > 0 ? asEntity(value) : null;
+
+	if (entity) {
+		return [
+			row({ value: <EntityChip entity={entity} /> }),
+			...entity.rest.flatMap(([key, entry]) =>
+				rowsFor(entry, reading, key, path ? `${path}.${key}` : key, depth + 1),
+			),
+		];
 	}
 
 	const entries = Object.entries(value as Record<string, unknown>);
-	if (entries.length === 0)
-		return <p className="text-sm text-muted/50">empty</p>;
+	if (entries.length === 0) return [row({ note: "empty" })];
 
-	const leaves = entries.filter(([, entry]) => isLeaf(entry));
-	const branches = entries.filter(([, entry]) => !isLeaf(entry));
+	// Depth beyond this is deeper than any venue payload seen so far, and a
+	// guard against one that contains itself.
+	if (depth > 5) return [row({ note: "…" })];
+
+	return [
+		...(name ? [row({ note: `${entries.length} fields` })] : []),
+		...entries.flatMap(([key, entry]) =>
+			rowsFor(entry, reading, key, path ? `${path}.${key}` : key, depth + 1),
+		),
+	];
+}
+
+function Payload({
+	value,
+	reading,
+}: {
+	value: unknown;
+	reading: Map<string, string>;
+}) {
+	const rows = rowsFor(value, reading);
 
 	return (
-		<div className="flex flex-col gap-5">
-			{leaves.length > 0 ? (
-				<dl className="grid gap-x-8 gap-y-4 sm:grid-cols-2 lg:grid-cols-3">
-					{leaves.map(([key, entry]) => (
-						<Pair
-							key={key}
-							name={key}
-							value={entry}
-							reading={reading.get(path ? `${path}.${key}` : key)}
-						/>
-					))}
-				</dl>
-			) : null}
-
-			{branches.map(([key, entry]) => {
-				const entity = Array.isArray(entry) ? null : asEntity(entry);
+		<dl className="min-w-0">
+			{rows.map((row, index) => {
+				const label = reading.get(row.path);
 
 				return (
-					<section key={key} className="min-w-0">
-						<h3 className="fx-eyebrow flex flex-wrap items-baseline gap-x-2 text-muted/60">
-							{key}
-							{Array.isArray(entry) ? (
-								<span className="text-muted/40">{entry.length}</span>
+					<div
+						key={`${row.path}-${index}`}
+						className="grid gap-x-6 gap-y-1 border-b border-border/60 px-5 py-2.5 last:border-b-0 sm:grid-cols-[minmax(0,18rem)_minmax(0,1fr)]"
+					>
+						<dt
+							className={`flex min-w-0 flex-wrap items-baseline gap-x-2 ${meta}`}
+							style={{ paddingLeft: `${row.depth * 0.9}rem` }}
+						>
+							<span className="text-muted">{row.name}</span>
+							{label ? (
+								<span className="text-primary/80">→ {label}</span>
 							) : null}
-							{reading.get(path ? `${path}.${key}` : key) ? (
-								<span className="text-primary/80">
-									→ {reading.get(path ? `${path}.${key}` : key)}
-								</span>
-							) : null}
-						</h3>
+						</dt>
 
-						<div className="mt-3 border-l border-border pl-4">
-							{entity ? (
-								<div className="flex flex-col items-start gap-3">
-									<span className="flex flex-wrap items-center gap-x-3 gap-y-2">
-										<EntityChip entity={entity} />
-										{reading.get(`${path ? `${path}.` : ""}${key}.name`) ? (
-											<span className="fx-eyebrow text-primary/80">
-												→ {reading.get(`${path ? `${path}.` : ""}${key}.name`)}
-											</span>
-										) : null}
-									</span>
-
-									{entity.rest.length > 0 ? (
-										<dl className="grid w-full gap-x-8 gap-y-3 sm:grid-cols-2 lg:grid-cols-3">
-											{entity.rest.map(([restKey, restValue]) => (
-												<Pair
-													key={restKey}
-													name={restKey}
-													value={restValue}
-													reading={reading.get(
-														`${path ? `${path}.` : ""}${key}.${restKey}`,
-													)}
-												/>
-											))}
-										</dl>
-									) : null}
-								</div>
-							) : (
-								<Nested
-									value={entry}
-									reading={reading}
-									path={path ? `${path}.${key}` : key}
-									depth={depth + 1}
-								/>
-							)}
-						</div>
-					</section>
+						<dd className="min-w-0 font-mono text-sm break-words">
+							{row.value ?? <span className="text-muted/50">{row.note}</span>}
+						</dd>
+					</div>
 				);
 			})}
-		</div>
+		</dl>
 	);
 }
 
@@ -873,9 +849,7 @@ export default async function OfferingPage({
 					reason to look.
 				</p>
 
-				<div className="px-5 py-5">
-					<Nested value={raw} reading={reading} />
-				</div>
+				<Payload value={raw} reading={reading} />
 
 				{/* For anyone who would rather take the whole thing away. */}
 				<details className="border-t border-border">
