@@ -10,6 +10,7 @@ export const navigation: readonly NavGroup[] = [
 			{ href: "/dashboard", label: "Overview" },
 			{ href: "/dashboard/discover", label: "Discover" },
 			{ href: "/dashboard/sourcing", label: "Sourcing" },
+			{ href: "/dashboard/underwrite", label: "Underwrite" },
 		],
 	},
 	{
