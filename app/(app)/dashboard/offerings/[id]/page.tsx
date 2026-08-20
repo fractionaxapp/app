@@ -75,6 +75,68 @@ function at(raw: unknown, path: string): string | null {
  * and a column of hundred-character CDN links tells the reader nothing they
  * can see.
  */
+/*
+ * What each of our fields is called on the page, so a key in the payload can
+ * be labelled with the thing it produced rather than with our variable name.
+ */
+const FIELD_LABELS: Record<string, string> = {
+	externalId: "Venue identifier",
+	title: "Name",
+	url: "Link",
+	icon: "Icon",
+	iconUrl: "Icon",
+	symbol: "Symbol",
+	issuer: "Issuer",
+	platform: "Platform",
+	assetClass: "Asset class",
+	jurisdiction: "Jurisdiction",
+	currency: "Currency",
+	minimum: "Minimum",
+	netYield: "Net yield",
+	termMonths: "Term",
+	seniority: "Seniority",
+	dscr: "DSCR",
+	networks: "Networks",
+	fundStructure: "Structure",
+	subscriptionFrequency: "Subscriptions",
+	redemptionFrequency: "Redemptions",
+	incomeTreatment: "Income",
+	investorTypes: "Investors",
+	aum: "Assets",
+	holdersCount: "Holders",
+	managementFee: "Management fee",
+	performanceFee: "Performance fee",
+	subscriptionFee: "Subscription fee",
+	redemptionFee: "Redemption fee",
+	inception: "Inception",
+	description: "Description",
+	reportedReturn: "Reported return",
+};
+
+/** Keys of the mapping that configure the crawl rather than name a field. */
+const NOT_FIELDS = new Set(["items", "buildId", "extract"]);
+
+/**
+ * Turn a source's mapping inside out: venue path → what we made of it.
+ *
+ * This is what makes the section worth opening. Without it the payload is a
+ * wall in which the fields shown above and the fields nobody reads look
+ * identical, and the only question a reader actually has — what else is in
+ * here — cannot be answered by looking.
+ */
+function readingOf(mapping: Record<string, unknown>) {
+	const byPath = new Map<string, string>();
+
+	for (const [field, path] of Object.entries(mapping)) {
+		if (NOT_FIELDS.has(field)) continue;
+		if (typeof path !== "string" || !path) continue;
+
+		byPath.set(path, FIELD_LABELS[field] ?? field);
+	}
+
+	return byPath;
+}
+
 /** A hex colour, shown as the colour as well as the code. */
 const COLOUR = /^#(?:[0-9a-f]{3}|[0-9a-f]{6}|[0-9a-f]{8})$/i;
 
@@ -155,10 +217,22 @@ function isLeaf(value: unknown) {
 }
 
 /** key: value, in a grid that fits several to a row. */
-function Pair({ name, value }: { name: string; value: unknown }) {
+function Pair({
+	name,
+	value,
+	reading,
+}: {
+	name: string;
+	value: unknown;
+	/** What we made of this key, if anything. */
+	reading?: string;
+}) {
 	return (
 		<div className="min-w-0">
-			<dt className={meta}>{name}</dt>
+			<dt className={`flex flex-wrap items-baseline gap-x-2 ${meta}`}>
+				{name}
+				{reading ? <span className="text-primary/80">→ {reading}</span> : null}
+			</dt>
 			<dd className="mt-1 font-mono text-sm break-words">
 				<Leaf value={value} name={name} />
 			</dd>
@@ -179,7 +253,18 @@ function Pair({ name, value }: { name: string; value: unknown }) {
  * are now a grid you can scan, and each nested object or list is a titled
  * block of its own.
  */
-function Nested({ value, depth = 0 }: { value: unknown; depth?: number }) {
+function Nested({
+	value,
+	reading,
+	path = "",
+	depth = 0,
+}: {
+	value: unknown;
+	reading: Map<string, string>;
+	/** Dotted path to this node, matched against the source's mapping. */
+	path?: string;
+	depth?: number;
+}) {
 	// Deeper than any venue payload seen so far, and a guard against one that
 	// contains itself.
 	if (depth > 4) return <p className="text-sm text-muted/50">…</p>;
@@ -197,7 +282,12 @@ function Nested({ value, depth = 0 }: { value: unknown; depth?: number }) {
 								<Leaf value={entry} name="" />
 							</span>
 						) : (
-							<Nested value={entry} depth={depth + 1} />
+							<Nested
+								value={entry}
+								reading={reading}
+								path={path}
+								depth={depth + 1}
+							/>
 						)}
 					</li>
 				))}
@@ -225,22 +315,37 @@ function Nested({ value, depth = 0 }: { value: unknown; depth?: number }) {
 			{leaves.length > 0 ? (
 				<dl className="grid gap-x-8 gap-y-4 sm:grid-cols-2 lg:grid-cols-3">
 					{leaves.map(([key, entry]) => (
-						<Pair key={key} name={key} value={entry} />
+						<Pair
+							key={key}
+							name={key}
+							value={entry}
+							reading={reading.get(path ? `${path}.${key}` : key)}
+						/>
 					))}
 				</dl>
 			) : null}
 
 			{branches.map(([key, entry]) => (
 				<section key={key} className="min-w-0">
-					<h3 className="fx-eyebrow text-muted/60">
+					<h3 className="fx-eyebrow flex flex-wrap items-baseline gap-x-2 text-muted/60">
 						{key}
 						{Array.isArray(entry) ? (
-							<span className="ml-2 text-muted/40">{entry.length}</span>
+							<span className="text-muted/40">{entry.length}</span>
+						) : null}
+						{reading.get(path ? `${path}.${key}` : key) ? (
+							<span className="text-primary/80">
+								→ {reading.get(path ? `${path}.${key}` : key)}
+							</span>
 						) : null}
 					</h3>
 
 					<div className="mt-3 border-l border-border pl-4">
-						<Nested value={entry} depth={depth + 1} />
+						<Nested
+							value={entry}
+							reading={reading}
+							path={path ? `${path}.${key}` : key}
+							depth={depth + 1}
+						/>
 					</div>
 				</section>
 			))}
@@ -314,6 +419,39 @@ export default async function OfferingPage({
 	if (!offering) notFound();
 
 	const raw = offering.raw;
+	const reading = readingOf(offering.source_mapping ?? {});
+
+	/*
+	 * How much of what the venue sent actually reaches the record above. This
+	 * is the number worth putting in the header: it turns "here is the payload"
+	 * into "here is the payload, and here is how much of it we ignore".
+	 */
+	const countLeaves = (value: unknown, path = ""): [number, number] => {
+		if (isLeaf(value)) return [1, reading.has(path) ? 1 : 0];
+		if (Array.isArray(value)) {
+			return value.reduce<[number, number]>(
+				([all, used], entry) => {
+					const [a, u] = countLeaves(entry, path);
+					return [all + a, used + u];
+				},
+				[0, 0],
+			);
+		}
+
+		return Object.entries(value as Record<string, unknown>).reduce<
+			[number, number]
+		>(
+			([all, used], [key, entry]) => {
+				const next = path ? `${path}.${key}` : key;
+				const [a, u] = reading.has(next) ? [1, 1] : countLeaves(entry, next);
+
+				return [all + a, used + u];
+			},
+			[0, 0],
+		);
+	};
+
+	const [fieldCount, usedCount] = countLeaves(raw);
 	const managerIcon = at(raw, "manager.icon_url");
 	const placeIcon = at(raw, "jurisdiction.icon");
 
@@ -584,7 +722,12 @@ export default async function OfferingPage({
 			{/* Folded away by default: it repeats everything above, on purpose. */}
 			<details className="group border border-border bg-surface">
 				<summary className="fx-eyebrow flex cursor-pointer list-none items-center justify-between gap-4 px-5 py-3.5 text-muted transition-colors hover:text-foreground [&::-webkit-details-marker]:hidden">
-					As published by the venue
+					<span className="flex flex-wrap items-baseline gap-x-3">
+						As published by the venue
+						<span className="text-muted/60">
+							{fieldCount} fields · {fieldCount - usedCount} we do not read
+						</span>
+					</span>
 					<span
 						aria-hidden
 						className="inline-block transition-transform group-open:rotate-90"
@@ -594,13 +737,27 @@ export default async function OfferingPage({
 				</summary>
 
 				<p className="border-y border-border px-5 py-3 text-sm text-pretty text-muted">
-					Everything above is our reading of this. Below is exactly what the
-					venue returned, including the fields we do not map.
+					Exactly what the venue returned. A key marked{" "}
+					<span className="text-primary/80">→ like this</span> is one the record
+					above was read from; everything else is here and unused, which is the
+					reason to look.
 				</p>
 
 				<div className="px-5 py-5">
-					<Nested value={raw} />
+					<Nested value={raw} reading={reading} />
 				</div>
+
+				{/* For anyone who would rather take the whole thing away. */}
+				<details className="border-t border-border">
+					<summary className="fx-eyebrow flex cursor-pointer list-none items-center gap-2 px-5 py-3 text-muted/70 transition-colors hover:text-foreground [&::-webkit-details-marker]:hidden">
+						<span aria-hidden>›</span>
+						As JSON
+					</summary>
+
+					<pre className="overflow-x-auto border-t border-border bg-background px-5 py-4 font-mono text-xs text-muted">
+						{JSON.stringify(raw, null, 2)}
+					</pre>
+				</details>
 			</details>
 		</div>
 	);

@@ -459,10 +459,15 @@ export async function offeringFacets() {
  * `raw` is left out of the list queries — it is the whole record and there is
  * no sense shipping thirteen hundred of them to render a table — but the page
  * for a single offering is exactly where it earns its keep.
+ *
+ * The source's mapping comes with it so the page can say which of the venue's
+ * keys produced which of our fields, and which it never reads at all.
  */
 export async function findOffering(id: string) {
-	const rows = await query<Offering & { raw: unknown }>(
-		`SELECT ${OFFERING_COLUMNS}, o.raw
+	const rows = await query<
+		Offering & { raw: unknown; source_mapping: Record<string, unknown> }
+	>(
+		`SELECT ${OFFERING_COLUMNS}, o.raw, s.mapping AS source_mapping
 		FROM offerings o JOIN sources s ON s.id = o.source_id
 		WHERE o.id = $1`,
 		[id],
