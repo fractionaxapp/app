@@ -8,6 +8,7 @@ export const navigation: readonly NavGroup[] = [
 		label: "Workspace",
 		items: [
 			{ href: "/dashboard", label: "Overview" },
+			{ href: "/dashboard/discover", label: "Discover" },
 			{ href: "/dashboard/sourcing", label: "Sourcing" },
 		],
 	},

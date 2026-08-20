@@ -18,7 +18,7 @@ import { Panel } from "../../_components/panel";
 
 import { dropMandate } from "./actions";
 import { MandateForm } from "./mandate-form";
-import { ResultsTable, type Filters } from "./results-table";
+import { OfferingTable, type Filters } from "../../_components/offering-table";
 
 export const metadata: Metadata = { title: "Sourcing" };
 
@@ -133,9 +133,13 @@ export default async function SourcingPage({
 		assetClass: params.class ?? "",
 		jurisdiction: params.place ?? "",
 		currency: params.ccy ?? "",
+		network: "",
 		q: (params.q ?? "").slice(0, 100),
+		sort: "recent",
 		page: Math.max(1, Number.parseInt(params.page ?? "1", 10) || 1),
 	};
+
+	const PER_PAGE = 25;
 
 	/*
 	 * One list, ordered so the verdict is the first thing that separates rows
@@ -278,15 +282,24 @@ export default async function SourcingPage({
 			) : null}
 
 			{results && stats.live > 0 ? (
-				<ResultsTable
-					matches={shown}
+				<OfferingTable
+					title="Sourced deals"
+					rows={shown.slice(
+						(Math.max(1, filters.page) - 1) * PER_PAGE,
+						Math.max(1, filters.page) * PER_PAGE,
+					)}
+					total={shown.length}
+					perPage={PER_PAGE}
 					filters={filters}
-					mandateId={selected?.id ?? ""}
+					path="/dashboard/sourcing"
+					keep={{ mandate: selected?.id ?? "" }}
+					showVerdict
 					options={{
 						assetClasses: distinct((o) => o.asset_class),
 						jurisdictions: distinct((o) => o.jurisdiction),
 						currencies: distinct((o) => o.currency),
 					}}
+					empty="Nothing matches those filters. Widen them, or clear them to see the whole index against this mandate."
 				/>
 			) : null}
 		</div>

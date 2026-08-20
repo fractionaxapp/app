@@ -323,6 +323,117 @@ export async function listLiveOfferings(limit = 5000) {
 	);
 }
 
+export type Browse = {
+	assetClass?: string;
+	jurisdiction?: string;
+	currency?: string;
+	network?: string;
+	q?: string;
+	sort?: string;
+	limit?: number;
+	offset?: number;
+};
+
+/*
+ * Sorts offered on the discover screen.
+ *
+ * Nulls last in every one of them: an offering that does not publish a figure
+ * has not got the smallest one, and sorting it to the top of "smallest
+ * minimum" would be a lie told by a null.
+ */
+const SORTS: Record<string, string> = {
+	recent: "o.last_seen DESC, o.title ASC",
+	name: "o.title ASC",
+	minimum: "o.minimum ASC NULLS LAST, o.title ASC",
+	"minimum-desc": "o.minimum DESC NULLS LAST, o.title ASC",
+	aum: "o.aum DESC NULLS LAST, o.title ASC",
+	holders: "o.holders_count DESC NULLS LAST, o.title ASC",
+};
+
+export const SORT_KEYS = Object.keys(SORTS);
+
+/*
+ * Browsing, as opposed to matching.
+ *
+ * Filtered, sorted and paged in Postgres rather than in the request. There is
+ * no per-row reasoning to compute here — nothing to explain, only rows to show
+ * — so none of the index needs to be in memory, and the cap the mandate screen
+ * has to live with does not apply.
+ */
+export async function browseOfferings(options: Browse = {}) {
+	const where: string[] = ["o.withdrawn_at IS NULL"];
+	const params: unknown[] = [];
+
+	const add = (clause: string, value: unknown) => {
+		params.push(value);
+		where.push(clause.replace("$?", `$${params.length}`));
+	};
+
+	if (options.assetClass) add("o.asset_class = $?", options.assetClass);
+	if (options.jurisdiction) add("o.jurisdiction = $?", options.jurisdiction);
+	if (options.currency) add("o.currency = $?", options.currency);
+	if (options.network) add("$? = ANY(o.networks)", options.network);
+
+	if (options.q?.trim()) {
+		params.push(`%${options.q.trim()}%`);
+		const index = params.length;
+		where.push(
+			`(o.title ILIKE $${index} OR o.issuer ILIKE $${index} OR o.symbol ILIKE $${index} OR o.platform ILIKE $${index})`,
+		);
+	}
+
+	const clause = where.join(" AND ");
+	const order = SORTS[options.sort ?? "recent"] ?? SORTS.recent;
+
+	const limit = Math.min(Math.max(1, options.limit ?? 25), 100);
+	const offset = Math.max(0, options.offset ?? 0);
+
+	const rows = await query<Offering>(
+		`SELECT ${OFFERING_COLUMNS}
+		FROM offerings o JOIN sources s ON s.id = o.source_id
+		WHERE ${clause}
+		ORDER BY ${order}
+		LIMIT ${limit} OFFSET ${offset}`,
+		params,
+	);
+
+	const counted = await query<{ n: string }>(
+		`SELECT count(*)::text AS n
+		FROM offerings o JOIN sources s ON s.id = o.source_id
+		WHERE ${clause}`,
+		params,
+	);
+
+	return { rows, total: Number(counted[0]?.n ?? 0) };
+}
+
+/** The values the filters can offer, taken from what is actually indexed. */
+export async function offeringFacets() {
+	const [classes, places, currencies, networks] = await Promise.all([
+		query<{ value: string }>(
+			"SELECT DISTINCT asset_class AS value FROM offerings WHERE withdrawn_at IS NULL AND asset_class IS NOT NULL ORDER BY 1",
+		),
+		query<{ value: string }>(
+			"SELECT DISTINCT jurisdiction AS value FROM offerings WHERE withdrawn_at IS NULL AND jurisdiction IS NOT NULL ORDER BY 1",
+		),
+		query<{ value: string }>(
+			"SELECT DISTINCT currency AS value FROM offerings WHERE withdrawn_at IS NULL AND currency IS NOT NULL ORDER BY 1",
+		),
+		query<{ value: string }>(
+			"SELECT DISTINCT unnest(networks) AS value FROM offerings WHERE withdrawn_at IS NULL AND networks IS NOT NULL ORDER BY 1",
+		),
+	]);
+
+	const values = (rows: { value: string }[]) => rows.map((row) => row.value);
+
+	return {
+		assetClasses: values(classes),
+		jurisdictions: values(places),
+		currencies: values(currencies),
+		networks: values(networks),
+	};
+}
+
 export async function offeringStats() {
 	const rows = await query<{ live: string; withdrawn: string; venues: string }>(
 		`SELECT

@@ -3,15 +3,18 @@ import Link from "next/link";
 import type { Match, Status } from "@/lib/sourcing/match";
 import type { Offering } from "@/lib/sourcing/types";
 
-import { Panel } from "../../_components/panel";
+import { Panel } from "./panel";
 
 /*
- * The sourced deals, as one table rather than three lists.
+ * The offerings table, shared by the two screens that show offerings.
  *
- * Three panels made the shape of the answer clear when there were four
- * offerings and unusable at thirteen hundred: you cannot compare a match
- * against an exclusion if they are in different sections, and there was no way
- * to ask "what is available in Singapore" without reading all of it.
+ * Sourcing runs a mandate and needs a verdict on every row; discover is
+ * browsing and has none. They are otherwise the same thing — the same columns,
+ * the same filters, the same expanded row — so they are the same component
+ * with the verdict switched off rather than two tables that drift apart.
+ *
+ * Rows arrive already paged. Sourcing slices in memory because it had to load
+ * the index to match against it; discover pages in SQL because it did not.
  *
  * Every row is a <details>. The accordion is the platform's, not ours — it
  * opens without JavaScript, it is keyboard operable and screen readers
@@ -19,15 +22,21 @@ import { Panel } from "../../_components/panel";
  * an expanded row does not break the columns.
  */
 
-const PER_PAGE = 25;
-
 export type Filters = {
 	verdict: string;
 	assetClass: string;
 	jurisdiction: string;
 	currency: string;
+	network: string;
 	q: string;
+	sort: string;
 	page: number;
+};
+
+export type Row = {
+	offering: Offering;
+	checks: Match["checks"];
+	status: Status;
 };
 
 const verdicts = [
@@ -56,6 +65,12 @@ const checkTone = {
 } as const;
 
 const meta = "font-mono text-xs tracking-wide text-muted";
+
+const COLUMNS =
+	"lg:grid-cols-[minmax(0,2.2fr)_minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,1fr)_7rem_8rem]";
+
+const BROWSE_COLUMNS =
+	"lg:grid-cols-[minmax(0,2.2fr)_minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,1fr)_7rem]";
 
 const stamp = new Intl.DateTimeFormat("en-GB", {
 	day: "numeric",
@@ -86,20 +101,30 @@ function compact(value: string | null) {
 	});
 }
 
-function href(base: string, filters: Filters, changes: Partial<Filters>) {
+function href(
+	path: string,
+	keep: Record<string, string>,
+	filters: Filters,
+	changes: Partial<Filters>,
+) {
 	const merged = { ...filters, ...changes };
 	const params = new URLSearchParams();
+
+	for (const [key, value] of Object.entries(keep)) {
+		if (value) params.set(key, value);
+	}
 
 	if (merged.verdict !== "all") params.set("verdict", merged.verdict);
 	if (merged.assetClass) params.set("class", merged.assetClass);
 	if (merged.jurisdiction) params.set("place", merged.jurisdiction);
 	if (merged.currency) params.set("ccy", merged.currency);
+	if (merged.network) params.set("chain", merged.network);
 	if (merged.q) params.set("q", merged.q);
+	if (merged.sort && merged.sort !== "recent") params.set("sort", merged.sort);
 	if (merged.page > 1) params.set("page", String(merged.page));
-	if (base) params.set("mandate", base);
 
 	const query = params.toString();
-	return `/dashboard/sourcing${query ? `?${query}` : ""}`;
+	return `${path}${query ? `?${query}` : ""}`;
 }
 
 /** One label/value pair in an opened row, skipped entirely when unknown. */
@@ -120,12 +145,16 @@ function Detail({
 	);
 }
 
-function Row({ match }: { match: Match }) {
+function Line({ match, showVerdict }: { match: Row; showVerdict: boolean }) {
 	const o: Offering = match.offering;
 
 	return (
 		<details className="group border-b border-border last:border-b-0">
-			<summary className="grid cursor-pointer list-none grid-cols-[1fr_auto] items-baseline gap-x-6 gap-y-2 px-5 py-3.5 transition-colors hover:bg-surface-muted lg:grid-cols-[minmax(0,2.2fr)_minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,1fr)_7rem_8rem] [&::-webkit-details-marker]:hidden">
+			<summary
+				className={`grid cursor-pointer list-none grid-cols-[1fr_auto] items-baseline gap-x-6 gap-y-2 px-5 py-3.5 transition-colors hover:bg-surface-muted [&::-webkit-details-marker]:hidden ${
+					showVerdict ? COLUMNS : BROWSE_COLUMNS
+				}`}
+			>
 				<span className="min-w-0 text-sm font-semibold">
 					<span
 						aria-hidden
@@ -153,16 +182,20 @@ function Row({ match }: { match: Match }) {
 					{o.jurisdiction ?? "—"}
 				</span>
 
+				{/* No minimum means no amount to denominate, so the currency goes
+				    with it — "— USDC" reads like a figure that failed to load. */}
 				<span className={`hidden lg:block ${meta} text-right tabular-nums`}>
 					{num(o.minimum) ?? "—"}
-					{o.currency ? (
+					{num(o.minimum) && o.currency ? (
 						<span className="ml-1 opacity-70">{o.currency}</span>
 					) : null}
 				</span>
 
-				<span className={`fx-eyebrow text-right ${statusTone[match.status]}`}>
-					{statusLabel[match.status]}
-				</span>
+				{showVerdict ? (
+					<span className={`fx-eyebrow text-right ${statusTone[match.status]}`}>
+						{statusLabel[match.status]}
+					</span>
+				) : null}
 			</summary>
 
 			<div className="border-t border-border bg-surface-muted/40 px-5 py-5">
@@ -179,11 +212,11 @@ function Row({ match }: { match: Match }) {
 							</li>
 						))}
 					</ul>
-				) : (
+				) : showVerdict ? (
 					<p className="text-sm text-muted">
 						This mandate states no criterion that touches this offering.
 					</p>
-				)}
+				) : null}
 
 				{o.description ? (
 					<p className="mt-4 max-w-3xl text-sm text-pretty text-muted">
@@ -276,67 +309,99 @@ function Row({ match }: { match: Match }) {
 	);
 }
 
-export function ResultsTable({
-	matches,
+export function OfferingTable({
+	title,
+	rows,
+	total,
+	perPage,
 	filters,
-	mandateId,
+	path,
+	keep = {},
+	showVerdict,
+	sorts,
 	options,
+	empty,
 }: {
-	matches: Match[];
+	title: string;
+	rows: Row[];
+	total: number;
+	perPage: number;
 	filters: Filters;
-	mandateId: string;
+	path: string;
+	keep?: Record<string, string>;
+	showVerdict: boolean;
+	sorts?: { key: string; label: string }[];
 	options: {
 		assetClasses: string[];
 		jurisdictions: string[];
 		currencies: string[];
+		networks?: string[];
 	};
+	empty: string;
 }) {
-	const total = matches.length;
-	const pages = Math.max(1, Math.ceil(total / PER_PAGE));
+	const pages = Math.max(1, Math.ceil(total / perPage));
 	const page = Math.min(Math.max(1, filters.page), pages);
-	const start = (page - 1) * PER_PAGE;
-	const visible = matches.slice(start, start + PER_PAGE);
+	const start = (page - 1) * perPage;
 
 	const select =
 		"min-h-9 w-full bg-surface px-2 font-mono text-xs text-foreground outline-none focus:bg-surface-muted";
 
+	const headings = showVerdict
+		? [
+				"Offering",
+				"Issuer",
+				"Asset class",
+				"Jurisdiction",
+				"Minimum",
+				"Verdict",
+			]
+		: ["Offering", "Issuer", "Asset class", "Jurisdiction", "Minimum"];
+
 	return (
 		<Panel
-			title="Sourced deals"
+			title={title}
 			status={
 				<span className="text-muted">
 					{total.toLocaleString("en-GB")} shown
 				</span>
 			}
 		>
-			{/* GET, so any view of the index is a URL you can send to someone. */}
-			{/* Verdict on its own line: it is the coarsest cut and the one people
-			    reach for first, so it should not compete with four dropdowns. */}
-			<div className="border-b border-border px-5 py-3">
-				<nav className="inline-flex flex-wrap gap-px bg-border">
-					{verdicts.map((entry) => (
-						<Link
-							key={entry.key}
-							href={href(mandateId, filters, {
-								verdict: entry.key,
-								page: 1,
-							})}
-							aria-current={entry.key === filters.verdict ? "page" : undefined}
-							className={`fx-eyebrow px-3.5 py-2 transition-colors ${
-								entry.key === filters.verdict
-									? "bg-surface-muted text-foreground"
-									: "bg-surface text-muted hover:text-foreground"
-							}`}
-						>
-							{entry.label}
-						</Link>
-					))}
-				</nav>
-			</div>
+			{showVerdict ? (
+				/* Verdict on its own line: it is the coarsest cut and the one people
+				   reach for first, so it should not compete with four dropdowns. */
+				<div className="border-b border-border px-5 py-3">
+					<nav className="inline-flex flex-wrap gap-px bg-border">
+						{verdicts.map((entry) => (
+							<Link
+								key={entry.key}
+								href={href(path, keep, filters, {
+									verdict: entry.key,
+									page: 1,
+								})}
+								aria-current={
+									entry.key === filters.verdict ? "page" : undefined
+								}
+								className={`fx-eyebrow px-3.5 py-2 transition-colors ${
+									entry.key === filters.verdict
+										? "bg-surface-muted text-foreground"
+										: "bg-surface text-muted hover:text-foreground"
+								}`}
+							>
+								{entry.label}
+							</Link>
+						))}
+					</nav>
+				</div>
+			) : null}
 
 			{/* GET, so any view of the index is a URL you can send to someone. */}
 			<form className="border-b border-border px-5 py-3.5">
-				<input type="hidden" name="mandate" value={mandateId} />
+				{Object.entries(keep).map(([key, value]) =>
+					value ? (
+						<input key={key} type="hidden" name={key} value={value} />
+					) : null,
+				)}
+
 				{filters.verdict !== "all" ? (
 					<input type="hidden" name="verdict" value={filters.verdict} />
 				) : null}
@@ -374,7 +439,25 @@ export function ResultsTable({
 						</select>
 					</label>
 
-					<label className="w-28">
+					{options.networks ? (
+						<label className="min-w-32 flex-1">
+							<span className="fx-eyebrow text-muted/70">Network</span>
+							<select
+								name="chain"
+								defaultValue={filters.network}
+								className={`${select} mt-1 border border-border`}
+							>
+								<option value="">Any</option>
+								{options.networks.map((entry) => (
+									<option key={entry} value={entry}>
+										{entry}
+									</option>
+								))}
+							</select>
+						</label>
+					) : null}
+
+					<label className="w-24">
 						<span className="fx-eyebrow text-muted/70">Currency</span>
 						<select
 							name="ccy"
@@ -401,6 +484,23 @@ export function ResultsTable({
 						/>
 					</label>
 
+					{sorts ? (
+						<label className="w-40">
+							<span className="fx-eyebrow text-muted/70">Sort</span>
+							<select
+								name="sort"
+								defaultValue={filters.sort}
+								className={`${select} mt-1 border border-border`}
+							>
+								{sorts.map((entry) => (
+									<option key={entry.key} value={entry.key}>
+										{entry.label}
+									</option>
+								))}
+							</select>
+						</label>
+					) : null}
+
 					<button
 						type="submit"
 						className="fx-eyebrow min-h-9 cursor-pointer border border-primary/50 px-3.5 font-semibold text-primary transition-colors hover:border-primary hover:bg-primary hover:text-background"
@@ -409,10 +509,11 @@ export function ResultsTable({
 					</button>
 
 					<Link
-						href={href(mandateId, filters, {
+						href={href(path, keep, filters, {
 							assetClass: "",
 							jurisdiction: "",
 							currency: "",
+							network: "",
 							q: "",
 							page: 1,
 						})}
@@ -424,22 +525,16 @@ export function ResultsTable({
 			</form>
 
 			{total === 0 ? (
-				<p className="px-5 py-8 text-pretty text-muted">
-					Nothing matches those filters. Widen them, or clear them to see the
-					whole index against this mandate.
-				</p>
+				<p className="px-5 py-8 text-pretty text-muted">{empty}</p>
 			) : (
 				<>
 					{/* Column headings, on the same grid the rows use. */}
-					<div className="hidden grid-cols-[minmax(0,2.2fr)_minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,1fr)_7rem_8rem] gap-x-6 border-b border-border bg-surface-muted/50 px-5 py-2 lg:grid">
-						{[
-							"Offering",
-							"Issuer",
-							"Asset class",
-							"Jurisdiction",
-							"Minimum",
-							"Verdict",
-						].map((heading, index) => (
+					<div
+						className={`hidden gap-x-6 border-b border-border bg-surface-muted/50 px-5 py-2 lg:grid ${
+							showVerdict ? COLUMNS : BROWSE_COLUMNS
+						} ${showVerdict ? "" : ""}`}
+					>
+						{headings.map((heading, index) => (
 							<span
 								key={heading}
 								className={`fx-eyebrow text-muted/70 ${
@@ -452,9 +547,9 @@ export function ResultsTable({
 					</div>
 
 					<ul>
-						{visible.map((match) => (
+						{rows.map((match) => (
 							<li key={match.offering.id}>
-								<Row match={match} />
+								<Line match={match} showVerdict={showVerdict} />
 							</li>
 						))}
 					</ul>
@@ -462,13 +557,13 @@ export function ResultsTable({
 					<div className="flex flex-wrap items-center justify-between gap-4 border-t border-border px-5 py-3.5">
 						<p className={meta}>
 							{(start + 1).toLocaleString("en-GB")}–
-							{Math.min(start + PER_PAGE, total).toLocaleString("en-GB")} of{" "}
+							{Math.min(start + perPage, total).toLocaleString("en-GB")} of{" "}
 							{total.toLocaleString("en-GB")}
 						</p>
 
 						<div className="flex items-center gap-px bg-border">
 							<PageLink
-								href={href(mandateId, filters, { page: page - 1 })}
+								href={href(path, keep, filters, { page: page - 1 })}
 								disabled={page <= 1}
 							>
 								Previous
@@ -479,7 +574,7 @@ export function ResultsTable({
 							</span>
 
 							<PageLink
-								href={href(mandateId, filters, { page: page + 1 })}
+								href={href(path, keep, filters, { page: page + 1 })}
 								disabled={page >= pages}
 							>
 								Next
