@@ -40,6 +40,58 @@ const percent = (value: number) => `${value}%`;
 const months = (value: number) =>
 	value % 12 === 0 ? `${value / 12} years` : `${value} months`;
 
+/*
+ * Country and currency names written the several ways people write them.
+ *
+ * Deliberately short. This is not a gazetteer and should not become one — it
+ * covers the abbreviations a mandate actually arrives with, and anything not
+ * listed simply has to be written the way the venue writes it, which fails
+ * visibly rather than silently.
+ */
+const ALIASES: Record<string, string[]> = {
+	us: [
+		"us",
+		"usa",
+		"u.s.",
+		"u.s.a.",
+		"united states",
+		"united states of america",
+	],
+	usa: [
+		"us",
+		"usa",
+		"u.s.",
+		"u.s.a.",
+		"united states",
+		"united states of america",
+	],
+	uk: ["uk", "u.k.", "united kingdom", "great britain", "britain", "england"],
+	uae: ["uae", "united arab emirates"],
+	eu: ["eu", "european union"],
+};
+
+function escapeRegex(value: string) {
+	return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+/*
+ * Whole-token matching, not substring.
+ *
+ * `includes` looked reasonable until a mandate asking for "us" matched
+ * Australia, Austria and Mauritius while *excluding* United States — the right
+ * deals thrown out and the wrong ones presented as matches, each with a
+ * confident reason attached. Short codes are the common case here, so this has
+ * to be right: "usd" must not find USDC either.
+ */
+function mentions(haystack: string, needle: string) {
+	const pattern = new RegExp(
+		`(?<![a-z0-9])${escapeRegex(needle)}(?![a-z0-9])`,
+		"i",
+	);
+
+	return pattern.test(haystack);
+}
+
 function listCheck(
 	label: string,
 	wanted: string[] | undefined,
@@ -57,8 +109,10 @@ function listCheck(
 		};
 	}
 
-	const haystack = actual.toLowerCase();
-	const hit = wanted.some((entry) => haystack.includes(entry.toLowerCase()));
+	const hit = wanted.some((entry) => {
+		const term = entry.trim().toLowerCase();
+		return (ALIASES[term] ?? [term]).some((form) => mentions(actual, form));
+	});
 
 	return {
 		label,
