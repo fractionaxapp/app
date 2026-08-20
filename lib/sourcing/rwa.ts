@@ -60,14 +60,16 @@ type Asset = {
 	stats?: Record<string, unknown> | null;
 };
 
-export async function fetchRwa(): Promise<NormalisedOffering[]> {
+export async function fetchRwa(
+	buildId?: string | null,
+): Promise<NormalisedOffering[]> {
 	if (!devSourcesEnabled()) {
 		throw new Error(
 			"the rwa.xyz reader is development-only; set ENABLE_DEV_SOURCES=1 to use it",
 		);
 	}
 
-	const payload = (await fetchNextData({ page: PAGE })) as {
+	const payload = (await fetchNextData({ page: PAGE, buildId })) as {
 		pageProps?: { assets?: unknown };
 	};
 

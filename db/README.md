@@ -292,6 +292,14 @@ the `nextdata` source kind takes the **page** address and reads the id out of
 the page on each run. A source configured this way keeps working after the site
 ships a new build, with no config to update.
 
+The build id is read off the page on every run, but it can be pinned from the
+Sources screen when discovery stops working — the site changes how it embeds
+the id, or serves a page whose id does not match its data — and the crawl has
+to run today rather than after a deploy. A pinned id skips the page fetch
+entirely. It will eventually go stale, and the source turns red when it does,
+which is the point: an override that fails loudly beats one that quietly
+serves nothing. Clearing the field returns to discovery.
+
 rwa.xyz's asset screener, which is about 1,300 tokenized assets:
 
 ```sql

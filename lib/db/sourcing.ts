@@ -70,6 +70,16 @@ export async function createSource(input: {
 	return rows[0].id;
 }
 
+export async function updateMapping(
+	id: string,
+	mapping: Record<string, unknown>,
+) {
+	await query(
+		"UPDATE sources SET mapping = $2, updated_at = now() WHERE id = $1",
+		[id, JSON.stringify(mapping)],
+	);
+}
+
 export async function setSourceEnabled(id: string, enabled: boolean) {
 	await query(
 		"UPDATE sources SET enabled = $2, updated_at = now() WHERE id = $1",

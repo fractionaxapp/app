@@ -10,7 +10,7 @@ import { devSourcesEnabled } from "@/lib/sourcing/rwa";
 
 import { Panel } from "../../../_components/panel";
 
-import { removeSource, runCrawl, toggleSource } from "./actions";
+import { removeSource, runCrawl, setBuildId, toggleSource } from "./actions";
 import { SourceForm } from "./source-form";
 
 /* Gated in metadata as well as in the body — see the access queue for why. */
@@ -116,7 +116,47 @@ export default async function SourcesPage() {
 
 										<p className={`mt-1.5 break-all ${meta}`}>{source.url}</p>
 
-										<p className={`mt-1.5 ${meta}`}>
+										{/*
+										 * Page-data sources resolve a deploy hash on every run.
+										 * Pinning one is the escape hatch for when discovery
+										 * stops working and the crawl has to run today.
+										 */}
+										{source.kind === "nextdata" || source.kind === "rwa" ? (
+											<form
+												action={setBuildId}
+												className="mt-2.5 flex flex-wrap items-center gap-2"
+											>
+												<input type="hidden" name="id" value={source.id} />
+												<label
+													className="fx-eyebrow text-muted/70"
+													htmlFor={`build-${source.id}`}
+												>
+													Build id
+												</label>
+												<input
+													id={`build-${source.id}`}
+													name="buildId"
+													defaultValue={
+														typeof source.mapping.buildId === "string"
+															? source.mapping.buildId
+															: ""
+													}
+													placeholder="discovered from the page"
+													className="min-h-8 w-64 border border-border bg-background px-2 font-mono text-xs text-foreground placeholder:text-muted/50 focus-visible:border-primary focus-visible:outline-none"
+												/>
+												<button
+													type="submit"
+													className="fx-eyebrow min-h-8 cursor-pointer border border-border px-2.5 text-muted transition-colors hover:border-foreground hover:text-foreground"
+												>
+													Save
+												</button>
+												<span className="text-xs text-muted/60">
+													empty discovers it each run
+												</span>
+											</form>
+										) : null}
+
+										<p className={`mt-2.5 ${meta}`}>
 											{source.last_run_at ? (
 												<>
 													Last run {stamp.format(source.last_run_at)} ·{" "}

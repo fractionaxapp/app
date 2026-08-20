@@ -71,11 +71,12 @@ const checkTone = {
 
 const meta = "font-mono text-xs tracking-wide text-muted";
 
-const COLUMNS =
-	"lg:grid-cols-[minmax(0,2.2fr)_minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,1fr)_7rem_8rem_5rem]";
+const COLUMNS = "lg:grid-cols-[minmax(0,3fr)_minmax(0,1fr)_7rem_8rem_5rem]";
 
-const BROWSE_COLUMNS =
-	"lg:grid-cols-[minmax(0,2.2fr)_minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,1fr)_7rem_5rem]";
+const BROWSE_COLUMNS = "lg:grid-cols-[minmax(0,3fr)_minmax(0,1fr)_7rem_5rem]";
+
+/** A fact about the offering, carried beside its name rather than in a column. */
+const tag = "border border-border px-1.5 py-0.5 text-muted/80";
 
 const stamp = new Intl.DateTimeFormat("en-GB", {
 	day: "numeric",
@@ -176,36 +177,51 @@ function Line({ match, showVerdict }: { match: Row; showVerdict: boolean }) {
 					showVerdict ? COLUMNS : BROWSE_COLUMNS
 				}`}
 			>
-				<span className="min-w-0 text-sm font-semibold group-open:text-primary">
+				<span className="flex min-w-0 items-start gap-3">
+					{/*
+					 * The control, drawn as one. A bare chevron in body colour read as
+					 * punctuation beside the title; boxed and tinted, it is the thing
+					 * you click and it says which way the row is going.
+					 */}
 					<span
 						aria-hidden
-						className="mr-2 inline-block text-muted transition-transform group-open:rotate-90 group-open:text-primary"
+						className="mt-0.5 flex size-5 shrink-0 items-center justify-center border border-border text-primary/70 transition-all group-open:rotate-90 group-open:border-primary group-open:bg-primary group-open:text-background"
 					>
 						›
 					</span>
-					{o.icon_url ? <Artwork src={o.icon_url} alt="" size={16} /> : null}{" "}
-					{o.title}
-					{o.symbol ? (
-						<span className="ml-2 font-mono text-xs font-normal text-muted">
-							{o.symbol}
-						</span>
-					) : null}
-				</span>
 
-				<span className={`hidden truncate lg:block ${meta}`}>
-					{o.issuer ?? o.platform ?? "—"}
+					<span className="min-w-0">
+						<span className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+							{o.icon_url ? (
+								<Artwork src={o.icon_url} alt="" size={16} />
+							) : null}
+							<span className="text-sm font-semibold group-open:text-primary">
+								{o.title}
+							</span>
+							{o.symbol ? (
+								<span className="font-mono text-xs text-muted">{o.symbol}</span>
+							) : null}
+						</span>
+
+						{(o.issuer ?? o.platform ?? o.jurisdiction) ? (
+							<span
+								className={`mt-1.5 flex flex-wrap items-center gap-1.5 ${meta}`}
+							>
+								{(o.issuer ?? o.platform) ? (
+									<span className={tag}>{o.issuer ?? o.platform}</span>
+								) : null}
+								{o.jurisdiction ? (
+									<span className={tag}>{o.jurisdiction}</span>
+								) : null}
+							</span>
+						) : null}
+					</span>
 				</span>
 
 				<span className={`hidden truncate lg:block ${meta}`}>
 					{o.asset_class ?? "—"}
 				</span>
 
-				<span className={`hidden truncate lg:block ${meta}`}>
-					{o.jurisdiction ?? "—"}
-				</span>
-
-				{/* No minimum means no amount to denominate, so the currency goes
-				    with it — "— USDC" reads like a figure that failed to load. */}
 				<span className={`hidden lg:block ${meta} text-right tabular-nums`}>
 					{num(o.minimum) ?? "—"}
 					{num(o.minimum) && o.currency ? (
@@ -370,23 +386,8 @@ export function OfferingTable({
 		"min-h-9 w-full bg-surface px-2 font-mono text-xs text-foreground outline-none focus:bg-surface-muted";
 
 	const headings = showVerdict
-		? [
-				"Offering",
-				"Issuer",
-				"Asset class",
-				"Jurisdiction",
-				"Minimum",
-				"Verdict",
-				"Record",
-			]
-		: [
-				"Offering",
-				"Issuer",
-				"Asset class",
-				"Jurisdiction",
-				"Minimum",
-				"Record",
-			];
+		? ["Offering", "Asset class", "Minimum", "Verdict", "Record"]
+		: ["Offering", "Asset class", "Minimum", "Record"];
 
 	return (
 		<Panel
@@ -569,7 +570,7 @@ export function OfferingTable({
 							<span
 								key={heading}
 								className={`fx-eyebrow text-muted/70 ${
-									index >= 4 ? "text-right" : ""
+									index >= 2 ? "text-right" : ""
 								}`}
 							>
 								{heading}

@@ -8,6 +8,7 @@ import {
 	deleteSource,
 	findSource,
 	setSourceEnabled,
+	updateMapping,
 } from "@/lib/db/sourcing";
 import { crawlAll, crawlSource } from "@/lib/sourcing/crawl";
 import { devSourcesEnabled } from "@/lib/sourcing/rwa";
@@ -142,6 +143,39 @@ export async function addSource(
 
 	refresh();
 	return { ok: `${label} added. Run it to see what comes back.` };
+}
+
+/*
+ * Pin or clear the build id for a page-data source.
+ *
+ * Stored on the mapping rather than in its own column: it is one venue's
+ * quirk, not a property every source has, and the mapping is already the place
+ * a source's peculiarities live.
+ */
+export async function setBuildId(formData: FormData) {
+	await requireAdmin();
+
+	const id = String(formData.get("id") ?? "");
+	if (!id) throw new Error("Invalid source reference.");
+
+	const value = String(formData.get("buildId") ?? "").trim();
+
+	// The ids are opaque, so the only sane check is that it looks like one.
+	if (value && !/^[A-Za-z0-9_-]{1,128}$/.test(value)) {
+		throw new Error("That does not look like a build id.");
+	}
+
+	const source = await findSource(id);
+	if (!source) throw new Error("No such source.");
+
+	const mapping = { ...source.mapping };
+
+	if (value) mapping.buildId = value;
+	else delete mapping.buildId;
+
+	await updateMapping(id, mapping);
+
+	refresh();
 }
 
 export async function toggleSource(formData: FormData) {

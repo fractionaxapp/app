@@ -24,6 +24,18 @@ import { fetchDocument } from "./http";
 export type NextDataTarget = {
 	/** A page on the site, e.g. https://app.rwa.xyz/asset-screener */
 	page: string;
+	/**
+	 * A build id to use instead of reading one off the page.
+	 *
+	 * Discovery is the right default and stays the default. This is for when it
+	 * stops working — the site changes how it embeds the id, or serves a page
+	 * whose id does not match its data — and someone needs the crawl running
+	 * again today rather than after a deploy. A pinned id will eventually go
+	 * stale, and the source turns red when it does, which is the intended
+	 * outcome: an override that fails loudly beats one that quietly serves
+	 * nothing.
+	 */
+	buildId?: string | null;
 };
 
 /**
@@ -71,8 +83,10 @@ export function dataUrlFor(page: string, buildId: string) {
 
 /** Fetch a page's data payload, discovering the build id on the way. */
 export async function fetchNextData(target: NextDataTarget): Promise<unknown> {
-	const html = await fetchDocument(target.page);
-	const buildId = buildIdFrom(html);
+	const pinned = target.buildId?.trim();
+
+	// A pinned id skips the page fetch entirely: one request instead of two.
+	const buildId = pinned || buildIdFrom(await fetchDocument(target.page));
 
 	if (!buildId) {
 		throw new Error(

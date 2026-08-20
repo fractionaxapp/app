@@ -148,6 +148,12 @@ async function enrich(offerings: NormalisedOffering[], opted: boolean) {
 	return used;
 }
 
+/** An operator-pinned build id, when the mapping carries one. */
+function buildIdOf(source: Source) {
+	const pinned = source.mapping.buildId;
+	return typeof pinned === "string" && pinned.trim() ? pinned.trim() : null;
+}
+
 export async function crawlSource(source: Source): Promise<RunResult> {
 	try {
 		/*
@@ -156,10 +162,13 @@ export async function crawlSource(source: Source): Promise<RunResult> {
 		 */
 		const offerings =
 			source.kind === "rwa"
-				? await fetchRwa()
+				? await fetchRwa(buildIdOf(source))
 				: source.kind === "nextdata"
 					? fromPayload(
-							await fetchNextData({ page: source.url }),
+							await fetchNextData({
+								page: source.url,
+								buildId: buildIdOf(source),
+							}),
 							source.mapping,
 						)
 					: source.kind === "rss"
