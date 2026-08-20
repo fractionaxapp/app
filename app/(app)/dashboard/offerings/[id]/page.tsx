@@ -394,14 +394,15 @@ export default async function OfferingPage({
 			</header>
 
 			{offering.description ? (
-				<Panel title="What the venue says">
-					<p className="max-w-prose px-5 py-5 text-pretty text-muted">
+				<div className="px-1">
+					<p className="fx-eyebrow text-muted/60">In the words of the venue</p>
+					<p className="mt-3 max-w-prose text-pretty text-muted">
 						{offering.description}
 					</p>
-				</Panel>
+				</div>
 			) : null}
 
-			<div className="grid gap-6 lg:grid-cols-2">
+			<div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
 				{/*
 				 * Terms keeps its gaps visible. Someone deciding on this needs to see
 				 * that no yield and no seniority were published — that absence is the
@@ -492,28 +493,16 @@ export default async function OfferingPage({
 						the payload, so none is asserted here.
 					</p>
 				</Panel>
-
-				<Panel title="Provenance">
-					<dl>
-						<Field label="Source" always value={offering.source_label} />
-						<Field
-							label="Venue identifier"
-							always
-							value={offering.external_id}
-						/>
-						<Field
-							label="First seen"
-							always
-							value={stamp.format(offering.first_seen)}
-						/>
-						<Field
-							label="Last seen"
-							always
-							value={stamp.format(offering.last_seen)}
-						/>
-					</dl>
-				</Panel>
 			</div>
+
+			<p
+				className={`flex flex-wrap items-center gap-x-5 gap-y-1.5 px-1 ${meta}`}
+			>
+				<span>{offering.source_label}</span>
+				<span>id {offering.external_id}</span>
+				<span>first seen {stamp.format(offering.first_seen)}</span>
+				<span>last seen {stamp.format(offering.last_seen)}</span>
+			</p>
 
 			{/* Folded away by default: it repeats everything above, on purpose. */}
 			<details className="group border border-border bg-surface">
