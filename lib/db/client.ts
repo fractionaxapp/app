@@ -41,7 +41,7 @@ function createPool() {
 		);
 	}
 
-	return new Pool({
+	const pool = new Pool({
 		connectionString,
 		ssl: sslConfig(),
 		// A droplet Postgres defaults to 100 connections shared across everything.
@@ -53,6 +53,28 @@ function createPool() {
 		// and handing it back later as a dead one.
 		keepAlive: true,
 	});
+
+	/*
+	 * A pooled connection can die while nobody is using it: a dropped link, a
+	 * NAT timeout, the database recycling an idle session. There is no query to
+	 * reject, so pg reports it as an 'error' event on the pool itself — and an
+	 * 'error' event with no listener is an uncaught exception in Node, which
+	 * ends the process.
+	 *
+	 * That failure is invisible from the browser, which is what makes it worth
+	 * this comment. Anything mid-render simply stops: the response never
+	 * completes, no error ever arrives, and the page sits on its loading
+	 * skeleton indefinitely. One blip on a flaky connection, and the whole
+	 * server is gone while the tab still looks like it is working.
+	 *
+	 * pg has already discarded the failed connection by the time this runs, so
+	 * there is nothing to repair here — only something to say out loud.
+	 */
+	pool.on("error", (error: Error) => {
+		console.error(`[db] pooled connection lost while idle: ${error.message}`);
+	});
+
+	return pool;
 }
 
 export function getPool(): Pool {

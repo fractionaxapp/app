@@ -3,6 +3,7 @@
 import { useAuth } from "@/lib/wallet";
 
 import Loading from "../loading";
+import { SignInStalled, useStalled } from "./stalled";
 
 /*
  * Client-side gate for the product surface. This is UX, not security — the
@@ -14,6 +15,9 @@ import Loading from "../loading";
 export function AuthGate({ children }: { children: React.ReactNode }) {
 	const { isEnabled, isReady, isAuthenticated, signIn } = useAuth();
 
+	// Hooks run unconditionally, so this is measured whether or not it is used.
+	const stalled = useStalled(10_000);
+
 	/*
 	 * No Privy app id configured — local development, previews, or before the
 	 * account exists. Show the surface rather than an inert sign-in screen, so
@@ -21,12 +25,18 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
 	 */
 	if (!isEnabled) return <>{children}</>;
 
-	// Restoring an existing session — reuse the route's own skeleton so the
-	// layout does not shift once it resolves.
+	/*
+	 * Restoring an existing session — reuse the route's own skeleton so the
+	 * layout does not shift once it resolves.
+	 *
+	 * Unless it never resolves. The SDK settles in well under a second when it
+	 * can reach its service at all, so ten seconds of this is not a slow
+	 * restore, it is a restore that is not happening.
+	 */
 	if (!isReady) {
 		return (
 			<div className="min-h-0 flex-1 overflow-y-auto p-6">
-				<Loading />
+				{stalled ? <SignInStalled /> : <Loading />}
 			</div>
 		);
 	}
