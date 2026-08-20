@@ -85,6 +85,7 @@ const SORTS = [
 	{ key: "minimum-desc", label: "Largest minimum" },
 	{ key: "aum", label: "Largest AUM" },
 	{ key: "holders", label: "Most holders" },
+	{ key: "return12m", label: "Best 12-month return" },
 	{ key: "name", label: "Name" },
 ];
 
@@ -135,6 +136,8 @@ function comparator(sort: string): (a: Match, b: Match) => number {
 			return by((m) => figure(m.offering.aum));
 		case "holders":
 			return by((m) => m.offering.holders_count);
+		case "return12m":
+			return by((m) => figure(m.offering.return_12m));
 		case "name":
 			return (a, b) => a.offering.title.localeCompare(b.offering.title);
 		default:

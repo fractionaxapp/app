@@ -13,6 +13,13 @@ export type Criteria = {
 	/** The largest cheque the account is willing to be asked for. */
 	maxMinimum?: number;
 	minDscr?: number;
+	/*
+	 * Trailing performance over the venue's own stated window. Separate from
+	 * yield on purpose: a share that rose 37% over a year paid no coupon, and
+	 * a mandate asking for income must not be answered with price movement.
+	 */
+	minReturn12m?: number;
+	maxReturn12m?: number;
 	assetClasses?: string[];
 	seniority?: string[];
 	jurisdictions?: string[];
@@ -28,6 +35,8 @@ export const CRITERIA_KEYS: (keyof Criteria)[] = [
 	"maxTermMonths",
 	"maxMinimum",
 	"minDscr",
+	"minReturn12m",
+	"maxReturn12m",
 	"assetClasses",
 	"seniority",
 	"jurisdictions",
@@ -70,6 +79,10 @@ export type NormalisedOffering = {
 	description?: string | null;
 	/** As reported, basis unstated. Never treated as a yield. */
 	reportedReturn?: number | null;
+	/* Trailing performance over stated windows. Returns, not income. */
+	return1m?: number | null;
+	return3m?: number | null;
+	return12m?: number | null;
 
 	raw: unknown;
 };
@@ -108,6 +121,9 @@ export type Offering = {
 	inception: string | null;
 	description: string | null;
 	reported_return: string | null;
+	return_1m: string | null;
+	return_3m: string | null;
+	return_12m: string | null;
 	first_seen: Date;
 	last_seen: Date;
 	withdrawn_at: Date | null;

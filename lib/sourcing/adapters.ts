@@ -217,6 +217,20 @@ function offeringFrom(
 			value(item, mapping, "reportedReturn", "reported_return", "return"),
 		),
 
+		/*
+		 * Windows the venue names. Kept apart from reportedReturn above, which
+		 * names none, and from netYield, which is a different thing entirely.
+		 */
+		return1m: toNumber(
+			value(item, mapping, "return1m", "oneMonth", "return_1m"),
+		),
+		return3m: toNumber(
+			value(item, mapping, "return3m", "threeMonth", "return_3m"),
+		),
+		return12m: toNumber(
+			value(item, mapping, "return12m", "oneYear", "return_12m"),
+		),
+
 		raw: item,
 	} satisfies NormalisedOffering;
 }

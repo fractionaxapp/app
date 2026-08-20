@@ -42,6 +42,15 @@ const SCHEMA = {
 			type: "number",
 			description: "Lowest acceptable debt service coverage ratio, e.g. 1.5.",
 		},
+		minReturn12m: {
+			type: "number",
+			description:
+				"Lowest acceptable trailing twelve-month return, in percent. This is past performance of the asset, NOT income: use it only when the mandate talks about how something has performed or risen, never for a yield or a coupon.",
+		},
+		maxReturn12m: {
+			type: "number",
+			description: "Highest acceptable trailing twelve-month return, percent.",
+		},
 		assetClasses: {
 			type: "array",
 			items: { type: "string" },
@@ -81,6 +90,15 @@ const SYSTEM = [
 	"guess at a number that was not given. A mandate that says nothing about",
 	"jurisdiction has no jurisdiction constraint, and returning one would filter",
 	"out deals the investor asked to see.",
+	"",
+	"`exclude` is only for things the mandate rules out — 'no crypto-backed",
+	"deals', 'nothing in Russia'. Never put something there that the mandate",
+	"asks for: excluding what was requested matches nothing at all.",
+	"",
+	"Income and performance are different fields and must not be swapped. A",
+	"yield, a coupon or 'x% net' is minYield. How something has performed —",
+	"'returned 30% over the last year', 'up 15%' — is minReturn12m. A share",
+	"that rose 37% paid no coupon.",
 ].join("\n");
 
 function clampNumber(value: unknown, min: number, max: number) {
@@ -114,6 +132,9 @@ function sanitise(input: Partial<Criteria>): Criteria {
 		maxTermMonths: clampNumber(input.maxTermMonths, 0, 600),
 		maxMinimum: clampNumber(input.maxMinimum, 0, 1_000_000_000),
 		minDscr: clampNumber(input.minDscr, 0, 100),
+		// A twelve-month return can be negative, and often is.
+		minReturn12m: clampNumber(input.minReturn12m, -100, 1000),
+		maxReturn12m: clampNumber(input.maxReturn12m, -100, 1000),
 		assetClasses: clampList(input.assetClasses),
 		seniority: clampList(input.seniority),
 		jurisdictions: clampList(input.jurisdictions),
@@ -122,6 +143,26 @@ function sanitise(input: Partial<Criteria>): Criteria {
 		),
 		exclude: clampList(input.exclude),
 	};
+
+	/*
+	 * A term cannot be both asked for and ruled out. Models do produce this —
+	 * "stocks that returned 30%" came back asking for stocks and excluding
+	 * them — and the result matches nothing, silently. The exclusion loses:
+	 * what the mandate asked for is the clearer signal.
+	 */
+	if (criteria.exclude) {
+		const asked = new Set(
+			[
+				...(criteria.assetClasses ?? []),
+				...(criteria.seniority ?? []),
+				...(criteria.jurisdictions ?? []),
+				...(criteria.currencies ?? []),
+			].map((entry) => entry.toLowerCase()),
+		);
+
+		const kept = criteria.exclude.filter((word) => !asked.has(word));
+		criteria.exclude = kept.length > 0 ? kept : undefined;
+	}
 
 	for (const key of Object.keys(criteria) as (keyof Criteria)[]) {
 		if (criteria[key] === undefined) delete criteria[key];
@@ -180,6 +221,15 @@ export function parseWithRules(statement: string): Criteria {
 		/dscr\s*(?:of|above|over|at least|>=?)?\s*([\d.]+)/,
 	);
 
+	/*
+	 * Only when the sentence says so. "8% net" is income; "up 20% over the last
+	 * year" is performance, and reading one as the other is the mistake this
+	 * field exists to avoid.
+	 */
+	const returnMatch = text.match(
+		/(?:returned|return|performance|up|gained|grew)[^.\d]{0,24}([\d.]+)\s*%[^.]{0,24}(?:year|12 months|twelve months)/,
+	);
+
 	const raw: Partial<Criteria> = {
 		minYield: yieldMatch
 			? Number.parseFloat(yieldMatch[1])
@@ -200,6 +250,8 @@ export function parseWithRules(statement: string): Criteria {
 		),
 
 		minDscr: dscrMatch ? Number.parseFloat(dscrMatch[1]) : undefined,
+
+		minReturn12m: returnMatch ? Number.parseFloat(returnMatch[1]) : undefined,
 
 		assetClasses: ASSET_CLASSES.filter((entry) => text.includes(entry)),
 

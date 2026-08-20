@@ -27,6 +27,7 @@ const sorts = [
 	{ key: "minimum-desc", label: "Largest minimum" },
 	{ key: "aum", label: "Largest AUM" },
 	{ key: "holders", label: "Most holders" },
+	{ key: "return-12m", label: "Best 12-month return" },
 	{ key: "name", label: "Name" },
 ];
 

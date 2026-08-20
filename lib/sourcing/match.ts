@@ -193,6 +193,13 @@ export function checkOffering(offering: Offering, criteria: Criteria): Match {
 		}),
 	);
 
+	push(
+		boundCheck("12-month return", number(offering.return_12m), percent, {
+			min: criteria.minReturn12m,
+			max: criteria.maxReturn12m,
+		}),
+	);
+
 	push(listCheck("Asset class", criteria.assetClasses, offering.asset_class));
 	push(listCheck("Seniority", criteria.seniority, offering.seniority));
 	push(

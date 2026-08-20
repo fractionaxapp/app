@@ -309,6 +309,11 @@ function Line({ match, showVerdict }: { match: Row; showVerdict: boolean }) {
 					/>
 					<Detail label="Seniority" value={o.seniority} />
 					<Detail label="DSCR" value={num(o.dscr, 2)} />
+					{/* Performance, labelled by its window so it cannot read as income. */}
+					<Detail
+						label="12-month return"
+						value={num(o.return_12m, 2) ? `${num(o.return_12m, 2)}%` : null}
+					/>
 				</dl>
 
 				{/*

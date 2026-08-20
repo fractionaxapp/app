@@ -789,6 +789,51 @@ export default async function OfferingPage({
 					</dl>
 				</Panel>
 
+				{offering.return_1m !== null ||
+				offering.return_3m !== null ||
+				offering.return_12m !== null ? (
+					<Panel title="Performance">
+						<dl>
+							<Field
+								label="1 month"
+								value={
+									num(offering.return_1m, 2)
+										? `${num(offering.return_1m, 2)}%`
+										: null
+								}
+							/>
+							<Field
+								label="3 months"
+								value={
+									num(offering.return_3m, 2)
+										? `${num(offering.return_3m, 2)}%`
+										: null
+								}
+							/>
+							<Field
+								label="12 months"
+								value={
+									num(offering.return_12m, 2)
+										? `${num(offering.return_12m, 2)}%`
+										: null
+								}
+							/>
+						</dl>
+
+						{/*
+						 * Kept apart from Terms on purpose. These are returns on the
+						 * underlying over the window named, not income: a tokenized share
+						 * that rose 37% over a year paid no coupon, and a reader glancing
+						 * at a column of percentages should not have to work that out.
+						 */}
+						<p className="border-t border-border px-5 py-4 text-xs text-pretty text-muted">
+							Past performance of the asset over the window named, as the venue
+							publishes it — not income, and not a forecast. The matcher tests
+							it under its own name and never as a yield.
+						</p>
+					</Panel>
+				) : null}
+
 				<Panel title="Fees">
 					<dl>
 						<Field label="Management" value={num(offering.management_fee)} />

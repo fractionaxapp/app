@@ -161,6 +161,9 @@ const OFFERING_FIELDS = [
 	"inception",
 	"description",
 	"reported_return",
+	"return_1m",
+	"return_3m",
+	"return_12m",
 	"raw",
 ] as const;
 
@@ -194,6 +197,9 @@ const UPDATE_ON_CONFLICT = `
 	inception              = EXCLUDED.inception,
 	description            = EXCLUDED.description,
 	reported_return        = EXCLUDED.reported_return,
+	return_1m              = EXCLUDED.return_1m,
+	return_3m              = EXCLUDED.return_3m,
+	return_12m             = EXCLUDED.return_12m,
 	raw          = EXCLUDED.raw,
 	last_seen    = now(),
 	-- Back from the dead: a re-listed offering is live again.
@@ -233,6 +239,9 @@ function rowValues(sourceId: string, offering: NormalisedOffering) {
 		offering.inception ?? null,
 		offering.description ?? null,
 		offering.reportedReturn ?? null,
+		offering.return1m ?? null,
+		offering.return3m ?? null,
+		offering.return12m ?? null,
 		JSON.stringify(offering.raw ?? {}),
 	];
 }
@@ -309,7 +318,7 @@ const OFFERING_COLUMNS = `
 	o.subscription_frequency, o.redemption_frequency, o.income_treatment,
 	o.investor_types, o.aum, o.holders_count, o.management_fee,
 	o.performance_fee, o.subscription_fee, o.redemption_fee, o.inception,
-	o.description, o.reported_return,
+	o.description, o.reported_return, o.return_1m, o.return_3m, o.return_12m,
 	o.first_seen, o.last_seen, o.withdrawn_at
 `;
 
@@ -361,6 +370,7 @@ const SORTS: Record<string, string> = {
 	"minimum-desc": "o.minimum DESC NULLS LAST, o.title ASC",
 	aum: "o.aum DESC NULLS LAST, o.title ASC",
 	holders: "o.holders_count DESC NULLS LAST, o.title ASC",
+	"return-12m": "o.return_12m DESC NULLS LAST, o.title ASC",
 };
 
 export const SORT_KEYS = Object.keys(SORTS);
