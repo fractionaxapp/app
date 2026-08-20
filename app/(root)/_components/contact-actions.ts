@@ -24,10 +24,27 @@ import { siteConfig } from "@/lib/site";
  * reached the database is answered late rather than lost.
  */
 
+/*
+ * The error case carries the submitted values back.
+ *
+ * React resets an uncontrolled form once its action resolves, which is right
+ * after a successful send and wrong after a rejected one: the visitor is shown
+ * "that address does not look right" beside three empty boxes, and has to type
+ * the whole question again. `attempt` increments so the fields can be remounted
+ * with the values restored — a re-render alone would not put them back, the DOM
+ * having already been cleared.
+ */
+export type Submitted = { name: string; email: string; message: string };
+
 export type ContactState =
 	| { status: "idle" }
 	| { status: "sent" }
-	| { status: "error"; message: string };
+	| {
+			status: "error";
+			message: string;
+			attempt: number;
+			values: Submitted;
+	  };
 
 const LIMITS = { name: 120, email: 200, message: 4000 };
 
@@ -43,7 +60,7 @@ function field(formData: FormData, name: string) {
 }
 
 export async function submitEnquiry(
-	_previous: ContactState,
+	previous: ContactState,
 	formData: FormData,
 ): Promise<ContactState> {
 	// A field no human sees and no human fills in.
@@ -53,31 +70,35 @@ export async function submitEnquiry(
 	const email = field(formData, "email");
 	const message = field(formData, "message");
 
+	const attempt = previous.status === "error" ? previous.attempt + 1 : 1;
+
+	const reject = (reason: string): ContactState => ({
+		status: "error",
+		message: reason,
+		attempt,
+		values: { name, email, message },
+	});
+
 	if (!name || name.length > LIMITS.name) {
-		return { status: "error", message: "Please give us a name to reply to." };
+		return reject("Please give us a name to reply to.");
 	}
 
 	if (!EMAIL.test(email) || email.length > LIMITS.email) {
-		return {
-			status: "error",
-			message: "That email address does not look right.",
-		};
+		return reject("That email address does not look right.");
 	}
 
 	if (!message || message.length > LIMITS.message) {
-		return {
-			status: "error",
-			message: message
+		return reject(
+			message
 				? `Please keep it under ${LIMITS.message.toLocaleString()} characters.`
 				: "Tell us what you want to know.",
-		};
+		);
 	}
 
 	if (!isDatabaseEnabled) {
-		return {
-			status: "error",
-			message: `We cannot record messages right now — please write to ${siteConfig.contactEmail} instead.`,
-		};
+		return reject(
+			`We cannot record messages right now — please write to ${siteConfig.contactEmail} instead.`,
+		);
 	}
 
 	const requestHeaders = await headers();
@@ -86,10 +107,9 @@ export async function submitEnquiry(
 
 	try {
 		if ((await recentEnquiryCount(ip)) >= PER_HOUR) {
-			return {
-				status: "error",
-				message: `That is a lot of questions in one hour. Write to ${siteConfig.contactEmail} and we will pick it up there.`,
-			};
+			return reject(
+				`That is a lot of questions in one hour. Write to ${siteConfig.contactEmail} and we will pick it up there.`,
+			);
 		}
 
 		const id = await createEnquiry({
@@ -125,9 +145,8 @@ export async function submitEnquiry(
 	} catch (error) {
 		console.error("Failed to record enquiry", error);
 
-		return {
-			status: "error",
-			message: `Something went wrong at our end — please write to ${siteConfig.contactEmail}.`,
-		};
+		return reject(
+			`Something went wrong at our end — please write to ${siteConfig.contactEmail}.`,
+		);
 	}
 }

@@ -24,10 +24,20 @@ async function requireAdmin() {
 	return admin;
 }
 
-export type SourceState = { error?: string; ok?: string };
+/*
+ * The submitted values come back on rejection. React resets the form once the
+ * action resolves, and retyping a field mapping by hand because a URL had a
+ * typo in it is a needless thing to do to someone.
+ */
+export type SourceState = {
+	error?: string;
+	ok?: string;
+	attempt?: number;
+	values?: { label: string; url: string; kind: string; mapping: string };
+};
 
 export async function addSource(
-	_previous: SourceState,
+	previous: SourceState,
 	formData: FormData,
 ): Promise<SourceState> {
 	await requireAdmin();
@@ -37,10 +47,17 @@ export async function addSource(
 	const kind = String(formData.get("kind") ?? "json");
 	const mappingText = String(formData.get("mapping") ?? "").trim();
 
-	if (!label) return { error: "Give the venue a name." };
+	const attempt = (previous.attempt ?? 0) + 1;
+	const reject = (error: string): SourceState => ({
+		error,
+		attempt,
+		values: { label, url, kind, mapping: mappingText },
+	});
+
+	if (!label) return reject("Give the venue a name.");
 
 	if (kind !== "json" && kind !== "rss" && kind !== "rwa") {
-		return { error: "Unknown source kind." };
+		return reject("Unknown source kind.");
 	}
 
 	/*
@@ -50,7 +67,7 @@ export async function addSource(
 	 */
 	if (kind === "rwa") {
 		if (!devSourcesEnabled()) {
-			return { error: "Development sources are not enabled on this server." };
+			return reject("Development sources are not enabled on this server.");
 		}
 
 		await createSource({
@@ -72,7 +89,7 @@ export async function addSource(
 	try {
 		parsed = new URL(url);
 	} catch {
-		return { error: "That is not a URL." };
+		return reject("That is not a URL.");
 	}
 
 	/*
@@ -81,7 +98,7 @@ export async function addSource(
 	 * and read whatever this server can reach.
 	 */
 	if (parsed.protocol !== "https:" && parsed.protocol !== "http:") {
-		return { error: "Only http and https URLs can be crawled." };
+		return reject("Only http and https URLs can be crawled.");
 	}
 
 	if (
@@ -90,7 +107,7 @@ export async function addSource(
 		/^192\.168\./.test(parsed.hostname) ||
 		/^172\.(1[6-9]|2\d|3[01])\./.test(parsed.hostname)
 	) {
-		return { error: "That address is on a private network." };
+		return reject("That address is on a private network.");
 	}
 
 	let mapping: Record<string, unknown> = {};
@@ -100,12 +117,12 @@ export async function addSource(
 			const value: unknown = JSON.parse(mappingText);
 
 			if (!value || typeof value !== "object" || Array.isArray(value)) {
-				return { error: "The mapping must be a JSON object." };
+				return reject("The mapping must be a JSON object.");
 			}
 
 			mapping = value as Record<string, unknown>;
 		} catch {
-			return { error: "The mapping is not valid JSON." };
+			return reject("The mapping is not valid JSON.");
 		}
 	}
 

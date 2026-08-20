@@ -38,6 +38,16 @@ const meta = "font-mono text-xs tracking-wide text-muted";
  */
 const PER_GROUP = 25;
 
+/*
+ * Offerings loaded for one match run. Matching happens here rather than in SQL
+ * so that a single set of rules produces both the verdict and its reason, and
+ * that means the index has to fit in memory for the length of a request.
+ *
+ * If the index ever outgrows this the screen says so. A mandate quietly run
+ * against three quarters of the index is worse than one that admits it.
+ */
+const CONSIDERED = 5000;
+
 /* The criteria, said back in the same words a person would use. */
 function describe(criteria: Criteria): string[] {
 	const parts: string[] = [];
@@ -188,9 +198,11 @@ export default async function SourcingPage({
 	const selected: Mandate | undefined =
 		mandates.find((mandate) => mandate.id === params.mandate) ?? mandates[0];
 
-	const results = selected
-		? runMandate(await listLiveOfferings(), selected.criteria)
-		: null;
+	const offerings = selected ? await listLiveOfferings(CONSIDERED) : [];
+	const results = selected ? runMandate(offerings, selected.criteria) : null;
+
+	// True when the index is larger than one run can hold.
+	const truncated = stats.live > offerings.length;
 
 	return (
 		<div className="mx-auto flex w-full max-w-5xl flex-col gap-6">
@@ -284,6 +296,15 @@ export default async function SourcingPage({
 					</ul>
 				) : null}
 			</Panel>
+
+			{truncated ? (
+				<p className="border border-danger/40 bg-surface px-5 py-4 text-sm text-pretty text-accent">
+					The index holds {stats.live.toLocaleString("en-GB")} offerings and
+					this mandate was run against the{" "}
+					{offerings.length.toLocaleString("en-GB")} most recently seen. The
+					rest were not considered — say so before acting on the result.
+				</p>
+			) : null}
 
 			{results && stats.live > 0 ? (
 				<>

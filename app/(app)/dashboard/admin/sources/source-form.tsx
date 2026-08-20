@@ -21,6 +21,10 @@ const EXAMPLE = `{
 export function SourceForm({ devEnabled }: { devEnabled: boolean }) {
 	const [state, action, pending] = useActionState(addSource, initial);
 
+	// Remounts the fields so a rejected submission comes back filled in.
+	const attempt = state.attempt ?? 0;
+	const kept = state.error ? state.values : undefined;
+
 	return (
 		<form action={action} className="flex flex-col gap-4 px-5 py-5">
 			<div className="grid gap-4 sm:grid-cols-[1fr_8rem]">
@@ -29,10 +33,12 @@ export function SourceForm({ devEnabled }: { devEnabled: boolean }) {
 						Venue
 					</label>
 					<input
+						key={`label-${attempt}`}
 						id="source-label"
 						name="label"
 						required
 						maxLength={120}
+						defaultValue={kept?.label}
 						placeholder="Example Issuance"
 						className={`${fieldClass} mt-2`}
 					/>
@@ -43,9 +49,10 @@ export function SourceForm({ devEnabled }: { devEnabled: boolean }) {
 						Kind
 					</label>
 					<select
+						key={`kind-${attempt}`}
 						id="source-kind"
 						name="kind"
-						defaultValue="json"
+						defaultValue={kept?.kind ?? "json"}
 						className={`${fieldClass} mt-2`}
 					>
 						<option value="json">JSON</option>
@@ -60,9 +67,11 @@ export function SourceForm({ devEnabled }: { devEnabled: boolean }) {
 					Endpoint
 				</label>
 				<input
+					key={`url-${attempt}`}
 					id="source-url"
 					name="url"
 					type="url"
+					defaultValue={kept?.url}
 					placeholder="https://venue.example/api/offerings"
 					className={`${fieldClass} mt-2`}
 				/>
@@ -80,9 +89,11 @@ export function SourceForm({ devEnabled }: { devEnabled: boolean }) {
 					<span className="ml-2 normal-case opacity-70">optional</span>
 				</label>
 				<textarea
+					key={`mapping-${attempt}`}
 					id="source-mapping"
 					name="mapping"
 					rows={6}
+					defaultValue={kept?.mapping}
 					placeholder={EXAMPLE}
 					className={`${fieldClass} mt-2 resize-y`}
 				/>

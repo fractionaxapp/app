@@ -50,6 +50,14 @@ export function ContactDialog({
 
 	const sent = state.status === "sent";
 
+	/*
+	 * Remounts the fields after a rejection so the restored values take. The
+	 * key has to change for that: React resets the DOM inputs when the action
+	 * resolves, and a defaultValue on an already-mounted input is ignored.
+	 */
+	const attempt = state.status === "error" ? state.attempt : 0;
+	const kept = state.status === "error" ? state.values : null;
+
 	return (
 		<dialog
 			ref={dialog}
@@ -123,11 +131,13 @@ export function ContactDialog({
 									Your name
 								</label>
 								<input
+									key={`name-${attempt}`}
 									id="contact-name"
 									name="name"
 									required
 									maxLength={120}
 									autoComplete="name"
+									defaultValue={kept?.name}
 									placeholder="Your name"
 									className={fieldClass}
 								/>
@@ -138,12 +148,14 @@ export function ContactDialog({
 									Your email
 								</label>
 								<input
+									key={`email-${attempt}`}
 									id="contact-email"
 									name="email"
 									type="email"
 									required
 									maxLength={200}
 									autoComplete="email"
+									defaultValue={kept?.email}
 									placeholder="you@example.com"
 									className={fieldClass}
 								/>
@@ -154,11 +166,13 @@ export function ContactDialog({
 							Your question
 						</label>
 						<textarea
+							key={`message-${attempt}`}
 							id="contact-question"
 							name="message"
 							required
 							maxLength={4000}
 							rows={5}
+							defaultValue={kept?.message}
 							placeholder="Type your question…"
 							className={`${fieldClass} mt-3 resize-y`}
 						/>

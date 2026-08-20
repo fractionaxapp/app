@@ -23,28 +23,42 @@ async function requireOwner() {
 	return user.id;
 }
 
-export type MandateState = { error?: string };
+/*
+ * `attempt` and `statement` exist so a rejected mandate is not wiped: React
+ * resets an uncontrolled form once its action resolves, which would otherwise
+ * throw away the sentence someone just composed.
+ */
+export type MandateState = {
+	error?: string;
+	attempt?: number;
+	statement?: string;
+};
 
 export async function saveMandate(
-	_previous: MandateState,
+	previous: MandateState,
 	formData: FormData,
 ): Promise<MandateState> {
 	const userId = await requireOwner();
 
 	const statement = String(formData.get("statement") ?? "").trim();
+	const attempt = (previous.attempt ?? 0) + 1;
+	const reject = (error: string): MandateState => ({
+		error,
+		attempt,
+		statement,
+	});
 
-	if (!statement) return { error: "Describe what you are looking for." };
+	if (!statement) return reject("Describe what you are looking for.");
 	if (statement.length > 2000) {
-		return { error: "Keep the mandate under 2,000 characters." };
+		return reject("Keep the mandate under 2,000 characters.");
 	}
 
 	const { criteria, parsedBy } = await parseMandate(statement);
 
 	if (Object.keys(criteria).length === 0) {
-		return {
-			error:
-				"Nothing in that reads as a constraint. Name a yield, a term, a maximum cheque, an asset class or a jurisdiction.",
-		};
+		return reject(
+			"Nothing in that reads as a constraint. Name a yield, a term, a maximum cheque, an asset class or a jurisdiction.",
+		);
 	}
 
 	await createMandate({ userId, statement, criteria, parsedBy });

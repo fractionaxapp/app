@@ -112,6 +112,14 @@ export async function upsertOfferings(
 	sourceId: string,
 	offerings: NormalisedOffering[],
 ) {
+	/*
+	 * An empty list would mean the sweep below matches every row and withdraws
+	 * the venue's entire catalogue. The crawler already returns early in that
+	 * case, but the trap should not be left lying here for the next caller: a
+	 * parse that silently yields nothing is exactly when this would fire.
+	 */
+	if (offerings.length === 0) return { stored: 0, withdrawn: 0 };
+
 	return transaction(async (client) => {
 		const seen: string[] = [];
 
@@ -177,13 +185,24 @@ const OFFERING_COLUMNS = `
 	o.withdrawn_at
 `;
 
-/** Everything still listed, for the matcher to run over. */
-export async function listLiveOfferings(limit = 1000) {
+/**
+ * Everything still listed, for the matcher to run over.
+ *
+ * Ordered by when we last saw it rather than by yield. The cap has to fall
+ * somewhere, and "the most recently seen" is a rule that can be stated; taking
+ * the highest yields first sounds better but collapses the moment a venue
+ * publishes no yields, which is most of them — the order becomes whatever the
+ * null sort happens to do, and the caller cannot say what was left out.
+ *
+ * The caller compares this length against the live count and tells the reader
+ * when the two disagree.
+ */
+export async function listLiveOfferings(limit = 5000) {
 	return query<Offering>(
 		`SELECT ${OFFERING_COLUMNS}
 		FROM offerings o JOIN sources s ON s.id = o.source_id
 		WHERE o.withdrawn_at IS NULL
-		ORDER BY o.net_yield DESC NULLS LAST
+		ORDER BY o.last_seen DESC
 		LIMIT $1`,
 		[limit],
 	);

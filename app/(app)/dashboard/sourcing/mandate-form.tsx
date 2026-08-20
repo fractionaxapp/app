@@ -26,12 +26,15 @@ export function MandateForm({ aiEnabled }: { aiEnabled: boolean }) {
 				What are you looking for?
 			</label>
 
+			{/* Keyed so a rejected mandate comes back with the sentence intact. */}
 			<textarea
+				key={state.attempt ?? 0}
 				id="statement"
 				name="statement"
 				rows={3}
 				maxLength={2000}
 				required
+				defaultValue={state.error ? state.statement : undefined}
 				placeholder={examples[0]}
 				className="mt-3 w-full resize-y border border-border bg-background px-4 py-3 font-mono text-sm text-foreground placeholder:text-muted/50 focus-visible:border-primary focus-visible:outline-none"
 			/>
@@ -62,9 +65,7 @@ export function MandateForm({ aiEnabled }: { aiEnabled: boolean }) {
 					{pending ? "Reading…" : "Add mandate"}
 				</button>
 
-				<span className="text-xs text-muted">
-					Example: {examples[1]}
-				</span>
+				<span className="text-xs text-muted">Example: {examples[1]}</span>
 			</div>
 		</form>
 	);
