@@ -108,6 +108,78 @@ export async function recordRun(
  * it: a run that half-succeeded must not leave the index claiming a venue has
  * withdrawn offerings it never got to look at.
  */
+/*
+ * Rows per INSERT statement.
+ *
+ * One statement per offering is fine against a local database and ruinous
+ * against a hosted one: 1,301 offerings became 1,301 round trips inside a
+ * single transaction, minutes of it, holding a pool connection the whole time
+ * while every other request queued behind it. Batching turns that into single
+ * figures. 14 columns × 200 rows is well inside Postgres's parameter limit.
+ */
+const BATCH = 200;
+
+const OFFERING_FIELDS = [
+	"source_id",
+	"external_id",
+	"url",
+	"title",
+	"issuer",
+	"asset_class",
+	"currency",
+	"net_yield",
+	"term_months",
+	"seniority",
+	"minimum",
+	"jurisdiction",
+	"dscr",
+	"raw",
+] as const;
+
+const UPDATE_ON_CONFLICT = `
+	url          = EXCLUDED.url,
+	title        = EXCLUDED.title,
+	issuer       = EXCLUDED.issuer,
+	asset_class  = EXCLUDED.asset_class,
+	currency     = EXCLUDED.currency,
+	net_yield    = EXCLUDED.net_yield,
+	term_months  = EXCLUDED.term_months,
+	seniority    = EXCLUDED.seniority,
+	minimum      = EXCLUDED.minimum,
+	jurisdiction = EXCLUDED.jurisdiction,
+	dscr         = EXCLUDED.dscr,
+	raw          = EXCLUDED.raw,
+	last_seen    = now(),
+	-- Back from the dead: a re-listed offering is live again.
+	withdrawn_at = NULL
+`;
+
+function rowValues(sourceId: string, offering: NormalisedOffering) {
+	return [
+		sourceId,
+		offering.externalId,
+		offering.url ?? null,
+		offering.title,
+		offering.issuer ?? null,
+		offering.assetClass ?? null,
+		offering.currency ?? null,
+		offering.netYield ?? null,
+		offering.termMonths ?? null,
+		offering.seniority ?? null,
+		offering.minimum ?? null,
+		offering.jurisdiction ?? null,
+		offering.dscr ?? null,
+		JSON.stringify(offering.raw ?? {}),
+	];
+}
+
+/**
+ * Write what a crawl found.
+ *
+ * Everything happens in one transaction, and the withdrawal sweep is part of
+ * it: a run that half-succeeded must not leave the index claiming a venue has
+ * withdrawn offerings it never got to look at.
+ */
 export async function upsertOfferings(
 	sourceId: string,
 	offerings: NormalisedOffering[],
@@ -121,49 +193,36 @@ export async function upsertOfferings(
 	if (offerings.length === 0) return { stored: 0, withdrawn: 0 };
 
 	return transaction(async (client) => {
-		const seen: string[] = [];
+		/*
+		 * A venue listing the same identifier twice would make one statement
+		 * update a row it had just inserted, which Postgres refuses outright.
+		 * Last mention wins, as it would have with one statement per row.
+		 */
+		const unique = new Map<string, NormalisedOffering>();
+		for (const offering of offerings) unique.set(offering.externalId, offering);
 
-		for (const offering of offerings) {
+		const rows = [...unique.values()];
+
+		for (let start = 0; start < rows.length; start += BATCH) {
+			const chunk = rows.slice(start, start + BATCH);
+			const params: unknown[] = [];
+
+			const tuples = chunk.map((offering) => {
+				const values = rowValues(sourceId, offering);
+				const placeholders = values.map(
+					(_, index) => `$${params.length + index + 1}`,
+				);
+
+				params.push(...values);
+				return `(${placeholders.join(",")})`;
+			});
+
 			await client.query(
-				`INSERT INTO offerings (
-					source_id, external_id, url, title, issuer, asset_class, currency,
-					net_yield, term_months, seniority, minimum, jurisdiction, dscr, raw
-				) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
-				ON CONFLICT (source_id, external_id) DO UPDATE SET
-					url          = EXCLUDED.url,
-					title        = EXCLUDED.title,
-					issuer       = EXCLUDED.issuer,
-					asset_class  = EXCLUDED.asset_class,
-					currency     = EXCLUDED.currency,
-					net_yield    = EXCLUDED.net_yield,
-					term_months  = EXCLUDED.term_months,
-					seniority    = EXCLUDED.seniority,
-					minimum      = EXCLUDED.minimum,
-					jurisdiction = EXCLUDED.jurisdiction,
-					dscr         = EXCLUDED.dscr,
-					raw          = EXCLUDED.raw,
-					last_seen    = now(),
-					-- Back from the dead: a re-listed offering is live again.
-					withdrawn_at = NULL`,
-				[
-					sourceId,
-					offering.externalId,
-					offering.url ?? null,
-					offering.title,
-					offering.issuer ?? null,
-					offering.assetClass ?? null,
-					offering.currency ?? null,
-					offering.netYield ?? null,
-					offering.termMonths ?? null,
-					offering.seniority ?? null,
-					offering.minimum ?? null,
-					offering.jurisdiction ?? null,
-					offering.dscr ?? null,
-					JSON.stringify(offering.raw ?? {}),
-				],
+				`INSERT INTO offerings (${OFFERING_FIELDS.join(", ")})
+				VALUES ${tuples.join(",")}
+				ON CONFLICT (source_id, external_id) DO UPDATE SET ${UPDATE_ON_CONFLICT}`,
+				params,
 			);
-
-			seen.push(offering.externalId);
 		}
 
 		const { rowCount } = await client.query(
@@ -171,10 +230,10 @@ export async function upsertOfferings(
 			WHERE source_id = $1
 				AND withdrawn_at IS NULL
 				AND NOT (external_id = ANY($2::text[]))`,
-			[sourceId, seen],
+			[sourceId, rows.map((offering) => offering.externalId)],
 		);
 
-		return { stored: seen.length, withdrawn: rowCount ?? 0 };
+		return { stored: rows.length, withdrawn: rowCount ?? 0 };
 	});
 }
 
