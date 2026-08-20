@@ -212,6 +212,78 @@ function Leaf({ value, name }: { value: unknown; name: string }) {
 	return <span className="break-words">{value}</span>;
 }
 
+/*
+ * A named thing with a face: a chain, a manager, an asset class.
+ *
+ * These arrive as {icon, name, color} and were being drawn as three separate
+ * labelled fields each — eight chains became twenty-four rows of icon, name,
+ * colour, which is the payload's shape rather than the thing's. A chain is one
+ * thing and should look like one.
+ */
+type Entity = {
+	name: string;
+	icon?: string;
+	colour?: string;
+	/** Whatever else the object carried, so nothing is dropped. */
+	rest: [string, unknown][];
+};
+
+function asEntity(value: unknown): Entity | null {
+	if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+
+	const entries = Object.entries(value as Record<string, unknown>);
+
+	const named = entries.find(
+		([key, entry]) =>
+			key === "name" && typeof entry === "string" && entry.trim() !== "",
+	);
+
+	if (!named) return null;
+
+	const icon = entries.find(
+		([key, entry]) =>
+			typeof entry === "string" &&
+			/^https?:\/\//.test(entry) &&
+			(IMAGE_KEY.test(key) || IMAGE_FILE.test(entry)),
+	);
+
+	const colour = entries.find(
+		([, entry]) => typeof entry === "string" && COLOUR.test(entry),
+	);
+
+	// A bare { name } is just a field; it does not need a face.
+	if (!icon && !colour) return null;
+
+	const taken = new Set(
+		[named[0], icon?.[0], colour?.[0]].filter(Boolean) as string[],
+	);
+
+	return {
+		name: named[1] as string,
+		icon: icon?.[1] as string | undefined,
+		colour: colour?.[1] as string | undefined,
+		rest: entries.filter(([key]) => !taken.has(key)),
+	};
+}
+
+/** The thing itself: its mark, its name, and its colour used as a colour. */
+function EntityChip({ entity }: { entity: Entity }) {
+	return (
+		<span
+			title={entity.colour}
+			className="inline-flex items-center gap-2.5 border border-border py-1.5 pr-3 pl-2.5"
+			style={
+				entity.colour
+					? { boxShadow: `inset 3px 0 0 ${entity.colour}` }
+					: undefined
+			}
+		>
+			{entity.icon ? <Artwork src={entity.icon} alt="" size={18} /> : null}
+			<span className="font-mono text-sm">{entity.name}</span>
+		</span>
+	);
+}
+
 function isLeaf(value: unknown) {
 	return value === null || value === undefined || typeof value !== "object";
 }
@@ -273,6 +345,32 @@ function Nested({
 		if (value.length === 0)
 			return <p className="text-sm text-muted/50">empty</p>;
 
+		const entities = value.map(asEntity);
+
+		if (entities.every((entity) => entity !== null)) {
+			return (
+				<ul className="flex flex-wrap gap-2">
+					{(entities as Entity[]).map((entity, index) => (
+						<li key={index}>
+							<EntityChip entity={entity} />
+							{entity.rest.length > 0 ? (
+								<dl className="mt-2 flex flex-wrap gap-x-5 gap-y-1">
+									{entity.rest.map(([key, entry]) => (
+										<span key={key} className={`flex gap-2 ${meta}`}>
+											{key}
+											<span className="text-foreground">
+												<Leaf value={entry} name={key} />
+											</span>
+										</span>
+									))}
+								</dl>
+							) : null}
+						</li>
+					))}
+				</ul>
+			);
+		}
+
 		return (
 			<ol className="flex flex-col gap-3">
 				{value.map((entry, index) => (
@@ -325,30 +423,62 @@ function Nested({
 				</dl>
 			) : null}
 
-			{branches.map(([key, entry]) => (
-				<section key={key} className="min-w-0">
-					<h3 className="fx-eyebrow flex flex-wrap items-baseline gap-x-2 text-muted/60">
-						{key}
-						{Array.isArray(entry) ? (
-							<span className="text-muted/40">{entry.length}</span>
-						) : null}
-						{reading.get(path ? `${path}.${key}` : key) ? (
-							<span className="text-primary/80">
-								→ {reading.get(path ? `${path}.${key}` : key)}
-							</span>
-						) : null}
-					</h3>
+			{branches.map(([key, entry]) => {
+				const entity = Array.isArray(entry) ? null : asEntity(entry);
 
-					<div className="mt-3 border-l border-border pl-4">
-						<Nested
-							value={entry}
-							reading={reading}
-							path={path ? `${path}.${key}` : key}
-							depth={depth + 1}
-						/>
-					</div>
-				</section>
-			))}
+				return (
+					<section key={key} className="min-w-0">
+						<h3 className="fx-eyebrow flex flex-wrap items-baseline gap-x-2 text-muted/60">
+							{key}
+							{Array.isArray(entry) ? (
+								<span className="text-muted/40">{entry.length}</span>
+							) : null}
+							{reading.get(path ? `${path}.${key}` : key) ? (
+								<span className="text-primary/80">
+									→ {reading.get(path ? `${path}.${key}` : key)}
+								</span>
+							) : null}
+						</h3>
+
+						<div className="mt-3 border-l border-border pl-4">
+							{entity ? (
+								<div className="flex flex-col items-start gap-3">
+									<span className="flex flex-wrap items-center gap-x-3 gap-y-2">
+										<EntityChip entity={entity} />
+										{reading.get(`${path ? `${path}.` : ""}${key}.name`) ? (
+											<span className="fx-eyebrow text-primary/80">
+												→ {reading.get(`${path ? `${path}.` : ""}${key}.name`)}
+											</span>
+										) : null}
+									</span>
+
+									{entity.rest.length > 0 ? (
+										<dl className="grid w-full gap-x-8 gap-y-3 sm:grid-cols-2 lg:grid-cols-3">
+											{entity.rest.map(([restKey, restValue]) => (
+												<Pair
+													key={restKey}
+													name={restKey}
+													value={restValue}
+													reading={reading.get(
+														`${path ? `${path}.` : ""}${key}.${restKey}`,
+													)}
+												/>
+											))}
+										</dl>
+									) : null}
+								</div>
+							) : (
+								<Nested
+									value={entry}
+									reading={reading}
+									path={path ? `${path}.${key}` : key}
+									depth={depth + 1}
+								/>
+							)}
+						</div>
+					</section>
+				);
+			})}
 		</div>
 	);
 }
