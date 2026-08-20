@@ -99,17 +99,21 @@ function Raw({
 			const image = IMAGE_KEY.test(name) || IMAGE_FILE.test(text);
 
 			return image ? (
-				<span className="flex flex-wrap items-center gap-3">
-					<Artwork src={text} alt={name} size={28} />
-					<a
-						href={text}
-						target="_blank"
-						rel="noopener noreferrer"
-						className="text-primary/60 hover:text-primary break-all text-xs underline underline-offset-4"
-					>
-						{text}
-					</a>
-				</span>
+				/*
+				 * The picture, and only the picture. Showing the address beside it
+				 * doubled the row height to say in a hundred characters what the
+				 * image says at a glance. The image is still the link, so the
+				 * original is one click away.
+				 */
+				<a
+					href={text}
+					target="_blank"
+					rel="noopener noreferrer"
+					title={text}
+					className="inline-flex"
+				>
+					<Artwork src={text} alt={name} size={32} />
+				</a>
 			) : (
 				<a
 					href={text}
