@@ -167,6 +167,7 @@ function offeringFrom(
 			value(item, mapping, "dscr", "coverage", "debt_service_coverage"),
 		),
 
+		iconUrl: toText(value(item, mapping, "iconUrl", "icon", "logo", "image")),
 		symbol: toText(value(item, mapping, "symbol", "ticker", "code")),
 		platform: toText(value(item, mapping, "platform", "venue", "marketplace")),
 		networks: toList(value(item, mapping, "networks", "chains", "blockchains")),

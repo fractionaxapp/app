@@ -3,6 +3,7 @@ import Link from "next/link";
 import type { Match, Status } from "@/lib/sourcing/match";
 import type { Offering } from "@/lib/sourcing/types";
 
+import { Artwork } from "./artwork";
 import { Panel } from "./panel";
 
 /*
@@ -182,6 +183,7 @@ function Line({ match, showVerdict }: { match: Row; showVerdict: boolean }) {
 					>
 						›
 					</span>
+					{o.icon_url ? <Artwork src={o.icon_url} alt="" size={16} /> : null}{" "}
 					{o.title}
 					{o.symbol ? (
 						<span className="ml-2 font-mono text-xs font-normal text-muted">

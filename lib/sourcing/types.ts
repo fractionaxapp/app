@@ -51,6 +51,7 @@ export type NormalisedOffering = {
 	dscr?: number | null;
 
 	/* Everything else the venue publishes — see 0008_offering_detail.sql. */
+	iconUrl?: string | null;
 	symbol?: string | null;
 	platform?: string | null;
 	networks?: string[] | null;
@@ -89,6 +90,7 @@ export type Offering = {
 	minimum: string | null;
 	jurisdiction: string | null;
 	dscr: string | null;
+	icon_url: string | null;
 	symbol: string | null;
 	platform: string | null;
 	networks: string[] | null;
