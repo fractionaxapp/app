@@ -99,9 +99,15 @@ export function AppNav({ extra = [] }: { extra?: readonly NavGroup[] }) {
 										/* Same marker the marketing header uses for the current
 										   section, so "where am I" reads identically on both
 										   surfaces. */
+										/*
+										 * Teal for where you are. The palette reads teal as the
+										 * colour of things you act on, and a nav item is one —
+										 * the spine is an inset shadow so the label does not
+										 * shift two pixels against the items above and below.
+										 */
 										className={`fx-eyebrow flex items-center gap-2.5 px-5 py-3 transition-colors ${
 											isActive
-												? "bg-surface-muted text-foreground"
+												? "bg-surface-muted text-primary shadow-[inset_3px_0_0_var(--color-primary)]"
 												: "text-muted hover:bg-surface-muted hover:text-foreground"
 										}`}
 									>

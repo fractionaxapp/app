@@ -75,99 +75,176 @@ function at(raw: unknown, path: string): string | null {
  * and a column of hundred-character CDN links tells the reader nothing they
  * can see.
  */
-function Raw({
-	value,
-	name = "",
-	depth = 0,
-}: {
-	value: unknown;
-	name?: string;
-	depth?: number;
-}) {
+/** A hex colour, shown as the colour as well as the code. */
+const COLOUR = /^#(?:[0-9a-f]{3}|[0-9a-f]{6}|[0-9a-f]{8})$/i;
+
+/** One leaf: a string, a number, a boolean, a URL, a colour, or nothing. */
+function Leaf({ value, name }: { value: unknown; name: string }) {
 	if (value === null || value === undefined) {
 		return <span className="text-muted/50">null</span>;
 	}
 
-	if (
-		typeof value === "string" ||
-		typeof value === "number" ||
-		typeof value === "boolean"
-	) {
-		const text = String(value);
-
-		if (/^https?:\/\//.test(text)) {
-			const image = IMAGE_KEY.test(name) || IMAGE_FILE.test(text);
-
-			return image ? (
-				/*
-				 * The picture, and only the picture. Showing the address beside it
-				 * doubled the row height to say in a hundred characters what the
-				 * image says at a glance. The image is still the link, so the
-				 * original is one click away.
-				 */
-				<a
-					href={text}
-					target="_blank"
-					rel="noopener noreferrer"
-					title={text}
-					className="inline-flex"
-				>
-					<Artwork src={text} alt={name} size={32} />
-				</a>
-			) : (
-				<a
-					href={text}
-					target="_blank"
-					rel="noopener noreferrer"
-					className="text-primary break-all underline underline-offset-4"
-				>
-					{text}
-				</a>
-			);
-		}
-
-		return <span className="break-words">{text}</span>;
+	if (typeof value === "boolean") {
+		return (
+			<span className={value ? "text-primary" : "text-muted/70"}>
+				{String(value)}
+			</span>
+		);
 	}
 
+	/*
+	 * Printed exactly as it arrived. This section exists for fidelity, and
+	 * grouping the digits invents separators the venue never published — on an
+	 * identifier it is simply wrong: 14758 is not 14,758.
+	 */
+	if (typeof value === "number") {
+		return <span className="tabular-nums">{String(value)}</span>;
+	}
+
+	if (typeof value !== "string") return null;
+
+	if (/^https?:\/\//.test(value)) {
+		const image = IMAGE_KEY.test(name) || IMAGE_FILE.test(value);
+
+		return image ? (
+			/*
+			 * The picture, and only the picture — the address doubled the row
+			 * height to say what the image says at a glance. Still the link, with
+			 * the address on hover.
+			 */
+			<a
+				href={value}
+				target="_blank"
+				rel="noopener noreferrer"
+				title={value}
+				className="inline-flex"
+			>
+				<Artwork src={value} alt={name} size={28} />
+			</a>
+		) : (
+			<a
+				href={value}
+				target="_blank"
+				rel="noopener noreferrer"
+				className="text-primary break-all underline underline-offset-4"
+			>
+				{value}
+			</a>
+		);
+	}
+
+	// Same reasoning as the images: a colour is worth seeing, not decoding.
+	if (COLOUR.test(value)) {
+		return (
+			<span className="flex items-center gap-2">
+				<span
+					aria-hidden
+					className="inline-block size-4 shrink-0 border border-border"
+					style={{ background: value }}
+				/>
+				{value}
+			</span>
+		);
+	}
+
+	return <span className="break-words">{value}</span>;
+}
+
+function isLeaf(value: unknown) {
+	return value === null || value === undefined || typeof value !== "object";
+}
+
+/** key: value, in a grid that fits several to a row. */
+function Pair({ name, value }: { name: string; value: unknown }) {
+	return (
+		<div className="min-w-0">
+			<dt className={meta}>{name}</dt>
+			<dd className="mt-1 font-mono text-sm break-words">
+				<Leaf value={value} name={name} />
+			</dd>
+		</div>
+	);
+}
+
+/*
+ * The venue's own record, rendered as it arrived.
+ *
+ * Every field above this is our reading of it — a path we chose, a number we
+ * coerced. Keeping the source underneath means a figure that looks wrong can
+ * be checked against what was published without opening a database, and a
+ * field we never mapped is still there for whoever needs it.
+ *
+ * Grouped rather than dumped. One flat list of every key, nested objects and
+ * all, was a page of scrolling in which nothing stood out: the plain fields
+ * are now a grid you can scan, and each nested object or list is a titled
+ * block of its own.
+ */
+function Nested({ value, depth = 0 }: { value: unknown; depth?: number }) {
 	// Deeper than any venue payload seen so far, and a guard against one that
 	// contains itself.
-	if (depth > 4) return <span className="text-muted/50">…</span>;
+	if (depth > 4) return <p className="text-sm text-muted/50">…</p>;
 
 	if (Array.isArray(value)) {
-		if (value.length === 0) return <span className="text-muted/50">empty</span>;
+		if (value.length === 0)
+			return <p className="text-sm text-muted/50">empty</p>;
 
 		return (
-			<ul className="flex flex-col gap-1">
+			<ol className="flex flex-col gap-3">
 				{value.map((entry, index) => (
-					<li key={index}>
-						<Raw value={entry} name={name} depth={depth + 1} />
+					<li key={index} className="min-w-0">
+						{isLeaf(entry) ? (
+							<span className="font-mono text-sm">
+								<Leaf value={entry} name="" />
+							</span>
+						) : (
+							<Nested value={entry} depth={depth + 1} />
+						)}
 					</li>
 				))}
-			</ul>
+			</ol>
+		);
+	}
+
+	if (isLeaf(value)) {
+		return (
+			<span className="font-mono text-sm">
+				<Leaf value={value} name="" />
+			</span>
 		);
 	}
 
 	const entries = Object.entries(value as Record<string, unknown>);
-	if (entries.length === 0) return <span className="text-muted/50">empty</span>;
+	if (entries.length === 0)
+		return <p className="text-sm text-muted/50">empty</p>;
+
+	const leaves = entries.filter(([, entry]) => isLeaf(entry));
+	const branches = entries.filter(([, entry]) => !isLeaf(entry));
 
 	return (
-		<dl className={depth === 0 ? "" : "mt-1 border-l border-border pl-3"}>
-			{entries.map(([key, entry]) => (
-				<div
-					key={key}
-					className={
-						depth === 0
-							? "grid gap-x-6 gap-y-1 border-b border-border px-5 py-3 last:border-b-0 sm:grid-cols-[minmax(0,14rem)_minmax(0,1fr)]"
-							: "grid gap-x-4 gap-y-1 py-1 sm:grid-cols-[minmax(0,10rem)_minmax(0,1fr)]"
-					}
-				>
-					<dt className={`${meta} min-w-0`}>{key}</dt>
-					<dd className="min-w-0 font-mono text-sm">
-						<Raw value={entry} name={key} depth={depth + 1} />
-					</dd>
-				</div>
+		<div className="flex flex-col gap-5">
+			{leaves.length > 0 ? (
+				<dl className="grid gap-x-8 gap-y-4 sm:grid-cols-2 lg:grid-cols-3">
+					{leaves.map(([key, entry]) => (
+						<Pair key={key} name={key} value={entry} />
+					))}
+				</dl>
+			) : null}
+
+			{branches.map(([key, entry]) => (
+				<section key={key} className="min-w-0">
+					<h3 className="fx-eyebrow text-muted/60">
+						{key}
+						{Array.isArray(entry) ? (
+							<span className="ml-2 text-muted/40">{entry.length}</span>
+						) : null}
+					</h3>
+
+					<div className="mt-3 border-l border-border pl-4">
+						<Nested value={entry} depth={depth + 1} />
+					</div>
+				</section>
 			))}
-		</dl>
+		</div>
 	);
 }
 
@@ -521,7 +598,9 @@ export default async function OfferingPage({
 					venue returned, including the fields we do not map.
 				</p>
 
-				<Raw value={raw} />
+				<div className="px-5 py-5">
+					<Nested value={raw} />
+				</div>
 			</details>
 		</div>
 	);
