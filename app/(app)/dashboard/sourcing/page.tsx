@@ -6,8 +6,9 @@ import { getAccess } from "@/lib/access";
 import { isAiConfigured } from "@/lib/ai";
 import { isDatabaseEnabled } from "@/lib/db/client";
 import {
-	listLiveOfferings,
+	browseOfferings,
 	listMandates,
+	offeringFacets,
 	offeringStats,
 } from "@/lib/db/sourcing";
 import { findUserByPrivyDid } from "@/lib/db/users";
@@ -69,6 +70,79 @@ function describe(criteria: Criteria): string[] {
 	return parts;
 }
 
+/*
+ * Sorts offered on this screen.
+ *
+ * "Best fit" is the default and is the reason this screen exists: matches,
+ * then the ones nobody can verify, then the exclusions, each ranked by yield.
+ * The rest are the same orderings discover offers, for when the question is
+ * about the deals rather than about the mandate.
+ */
+const SORTS = [
+	{ key: "fit", label: "Best fit" },
+	{ key: "yield", label: "Highest yield" },
+	{ key: "minimum", label: "Smallest minimum" },
+	{ key: "minimum-desc", label: "Largest minimum" },
+	{ key: "aum", label: "Largest AUM" },
+	{ key: "holders", label: "Most holders" },
+	{ key: "name", label: "Name" },
+];
+
+const RANK: Record<string, number> = {
+	match: 0,
+	unverifiable: 1,
+	excluded: 2,
+};
+
+function figure(value: string | null) {
+	if (value === null) return null;
+	const parsed = Number.parseFloat(value);
+	return Number.isFinite(parsed) ? parsed : null;
+}
+
+/*
+ * Nulls last in every ordering. An offering that publishes no minimum has not
+ * got the smallest one, and floating it to the top of "smallest minimum" would
+ * be a lie told by a null — the same rule the discover query follows in SQL.
+ */
+function by(
+	pick: (match: Match) => number | null,
+	direction: 1 | -1 = -1,
+): (a: Match, b: Match) => number {
+	return (a, b) => {
+		const left = pick(a);
+		const right = pick(b);
+
+		if (left === null && right === null) return 0;
+		if (left === null) return 1;
+		if (right === null) return -1;
+
+		return (left - right) * direction;
+	};
+}
+
+function comparator(sort: string): (a: Match, b: Match) => number {
+	const yieldOrder = by((m) => figure(m.offering.net_yield));
+
+	switch (sort) {
+		case "yield":
+			return yieldOrder;
+		case "minimum":
+			return by((m) => figure(m.offering.minimum), 1);
+		case "minimum-desc":
+			return by((m) => figure(m.offering.minimum));
+		case "aum":
+			return by((m) => figure(m.offering.aum));
+		case "holders":
+			return by((m) => m.offering.holders_count);
+		case "name":
+			return (a, b) => a.offering.title.localeCompare(b.offering.title);
+		default:
+			// Best fit: verdict first, then yield inside each group.
+			return (a, b) => RANK[a.status] - RANK[b.status] || yieldOrder(a, b);
+	}
+}
+
 /* Attribution, in the words a person would use for each. */
 const readBy: Record<string, string> = {
 	claude: "Claude",
@@ -93,7 +167,9 @@ export default async function SourcingPage({
 		class?: string;
 		place?: string;
 		ccy?: string;
+		chain?: string;
 		q?: string;
+		sort?: string;
 		page?: string;
 		per?: string;
 	}>;
@@ -118,8 +194,9 @@ export default async function SourcingPage({
 	const user = await findUserByPrivyDid(access.did);
 	if (!user) redirect("/dashboard");
 
-	const [stats, mandates, params] = await Promise.all([
+	const [stats, facets, mandates, params] = await Promise.all([
 		offeringStats(),
+		offeringFacets(),
 		listMandates(user.id),
 		searchParams,
 	]);
@@ -127,25 +204,44 @@ export default async function SourcingPage({
 	const selected: Mandate | undefined =
 		mandates.find((mandate) => mandate.id === params.mandate) ?? mandates[0];
 
-	const offerings = selected ? await listLiveOfferings(CONSIDERED) : [];
-	const results = selected ? runMandate(offerings, selected.criteria) : null;
-
-	// True when the index is larger than one run can hold.
-	const truncated = stats.live > offerings.length;
-
 	const filters: Filters = {
 		verdict: params.verdict ?? "all",
 		assetClass: params.class ?? "",
 		jurisdiction: params.place ?? "",
 		currency: params.ccy ?? "",
-		network: "",
+		network: params.chain ?? "",
 		q: (params.q ?? "").slice(0, 100),
-		sort: "recent",
+		sort: SORTS.some((entry) => entry.key === params.sort)
+			? (params.sort as string)
+			: "fit",
 		page: Math.max(1, Number.parseInt(params.page ?? "1", 10) || 1),
 		perPage: PAGE_SIZES.includes(Number(params.per))
 			? Number(params.per)
 			: PAGE_SIZES[0],
 	};
+
+	/*
+	 * The filters that are pure predicates go to Postgres; only the verdict has
+	 * to wait for the matcher. That matters for the ceiling below: narrowing to
+	 * one jurisdiction usually leaves a set small enough that nothing is left
+	 * out at all.
+	 */
+	const found = selected
+		? await browseOfferings({
+				assetClass: filters.assetClass,
+				jurisdiction: filters.jurisdiction,
+				currency: filters.currency,
+				network: filters.network,
+				q: filters.q,
+				sort: "recent",
+				limit: CONSIDERED,
+			})
+		: { rows: [], total: 0 };
+
+	const results = selected ? runMandate(found.rows, selected.criteria) : null;
+
+	// True when more offerings match the filters than one run can hold.
+	const truncated = found.total > found.rows.length;
 
 	/*
 	 * One list, ordered so the verdict is the first thing that separates rows
@@ -156,36 +252,11 @@ export default async function SourcingPage({
 		? [...results.matched, ...results.unverifiable, ...results.excluded]
 		: [];
 
-	const needle = filters.q.trim().toLowerCase();
-
-	const shown = everything.filter((match) => {
-		const o = match.offering;
-
-		if (filters.verdict !== "all" && match.status !== filters.verdict)
-			return false;
-		if (filters.assetClass && o.asset_class !== filters.assetClass)
-			return false;
-		if (filters.jurisdiction && o.jurisdiction !== filters.jurisdiction)
-			return false;
-		if (filters.currency && o.currency !== filters.currency) return false;
-
-		if (needle) {
-			const haystack = [o.title, o.issuer, o.platform, o.symbol]
-				.filter(Boolean)
-				.join(" ")
-				.toLowerCase();
-
-			if (!haystack.includes(needle)) return false;
-		}
-
-		return true;
-	});
-
-	/* Filter options come from the index itself, so none of them is a dead end. */
-	const distinct = (pick: (offering: Match["offering"]) => string | null) =>
-		[...new Set(everything.map((m) => pick(m.offering)).filter(Boolean))]
-			.sort((a, b) => (a as string).localeCompare(b as string))
-			.slice(0, 200) as string[];
+	const shown = everything
+		.filter(
+			(match) => filters.verdict === "all" || match.status === filters.verdict,
+		)
+		.sort(comparator(filters.sort));
 
 	return (
 		<div className="mx-auto flex w-full max-w-5xl flex-col gap-6">
@@ -198,7 +269,7 @@ export default async function SourcingPage({
 					<article key={metric.label} className="bg-surface px-5 py-6">
 						<p className="fx-eyebrow text-muted">{metric.label}</p>
 						<p className="mt-3 font-mono text-3xl leading-none font-medium tracking-tight text-accent tabular-nums">
-							{metric.value}
+							{metric.value.toLocaleString("en-GB")}
 						</p>
 					</article>
 				))}
@@ -280,10 +351,11 @@ export default async function SourcingPage({
 
 			{truncated ? (
 				<p className="border border-danger/40 bg-surface px-5 py-4 text-sm text-pretty text-accent">
-					The index holds {stats.live.toLocaleString("en-GB")} offerings and
-					this mandate was run against the{" "}
-					{offerings.length.toLocaleString("en-GB")} most recently seen. The
-					rest were not considered — say so before acting on the result.
+					{found.total.toLocaleString("en-GB")} offerings match these filters
+					and the mandate was run against the{" "}
+					{found.rows.length.toLocaleString("en-GB")} most recently seen. The
+					rest were not considered — narrow the filters, or say so before acting
+					on the result.
 				</p>
 			) : null}
 
@@ -299,11 +371,8 @@ export default async function SourcingPage({
 					path="/dashboard/sourcing"
 					keep={{ mandate: selected?.id ?? "" }}
 					showVerdict
-					options={{
-						assetClasses: distinct((o) => o.asset_class),
-						jurisdictions: distinct((o) => o.jurisdiction),
-						currencies: distinct((o) => o.currency),
-					}}
+					sorts={SORTS}
+					options={facets}
 					empty="Nothing matches those filters. Widen them, or clear them to see the whole index against this mandate."
 				/>
 			) : null}

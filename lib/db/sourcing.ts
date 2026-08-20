@@ -388,7 +388,13 @@ export async function browseOfferings(options: Browse = {}) {
 	const clause = where.join(" AND ");
 	const order = SORTS[options.sort ?? "recent"] ?? SORTS.recent;
 
-	const limit = Math.min(Math.max(1, options.limit ?? 25), 100);
+	/*
+	 * The ceiling is for the caller's benefit, not the database's: it stops a
+	 * page size out of a URL asking for the whole index. It has to leave room
+	 * for the sourcing screen, which loads in bulk to match against — clamping
+	 * this to a page size silently ran mandates against the first hundred rows.
+	 */
+	const limit = Math.min(Math.max(1, options.limit ?? 25), 5000);
 	const offset = Math.max(0, options.offset ?? 0);
 
 	const rows = await query<Offering>(
