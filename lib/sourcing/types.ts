@@ -49,6 +49,27 @@ export type NormalisedOffering = {
 	minimum?: number | null;
 	jurisdiction?: string | null;
 	dscr?: number | null;
+
+	/* Everything else the venue publishes — see 0008_offering_detail.sql. */
+	symbol?: string | null;
+	platform?: string | null;
+	networks?: string[] | null;
+	fundStructure?: string | null;
+	subscriptionFrequency?: string | null;
+	redemptionFrequency?: string | null;
+	incomeTreatment?: string | null;
+	investorTypes?: string[] | null;
+	aum?: number | null;
+	holdersCount?: number | null;
+	managementFee?: number | null;
+	performanceFee?: number | null;
+	subscriptionFee?: number | null;
+	redemptionFee?: number | null;
+	inception?: string | null;
+	description?: string | null;
+	/** As reported, basis unstated. Never treated as a yield. */
+	reportedReturn?: number | null;
+
 	raw: unknown;
 };
 
@@ -68,6 +89,23 @@ export type Offering = {
 	minimum: string | null;
 	jurisdiction: string | null;
 	dscr: string | null;
+	symbol: string | null;
+	platform: string | null;
+	networks: string[] | null;
+	fund_structure: string | null;
+	subscription_frequency: string | null;
+	redemption_frequency: string | null;
+	income_treatment: string | null;
+	investor_types: string[] | null;
+	aum: string | null;
+	holders_count: number | null;
+	management_fee: string | null;
+	performance_fee: string | null;
+	subscription_fee: string | null;
+	redemption_fee: string | null;
+	inception: string | null;
+	description: string | null;
+	reported_return: string | null;
 	first_seen: Date;
 	last_seen: Date;
 	withdrawn_at: Date | null;

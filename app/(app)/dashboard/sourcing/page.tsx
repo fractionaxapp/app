@@ -18,6 +18,7 @@ import { Panel } from "../../_components/panel";
 
 import { dropMandate } from "./actions";
 import { MandateForm } from "./mandate-form";
+import { ResultsTable, type Filters } from "./results-table";
 
 export const metadata: Metadata = { title: "Sourcing" };
 
@@ -29,14 +30,6 @@ const stamp = new Intl.DateTimeFormat("en-GB", {
 });
 
 const meta = "font-mono text-xs tracking-wide text-muted";
-
-/*
- * Rows rendered per group. A real index is thousands of offerings, and putting
- * all of them in one document is megabytes of HTML nobody scrolls. The count
- * in the header is the true total and the footer says what was left out —
- * a cap you cannot see reads as "this is everything".
- */
-const PER_GROUP = 25;
 
 /*
  * Offerings loaded for one match run. Matching happens here rather than in SQL
@@ -79,90 +72,6 @@ const readBy: Record<string, string> = {
 	rules: "the built-in parser",
 };
 
-const tone = {
-	pass: "text-primary",
-	fail: "text-danger",
-	unknown: "text-accent",
-} as const;
-
-function Result({ match }: { match: Match }) {
-	const offering = match.offering;
-
-	return (
-		<li className="border-b border-border px-5 py-4 last:border-b-0">
-			<div className="flex flex-wrap items-baseline justify-between gap-x-8 gap-y-2">
-				<p className="min-w-0 text-sm font-semibold">
-					{offering.url ? (
-						<a
-							href={offering.url}
-							target="_blank"
-							rel="noopener noreferrer"
-							className="underline underline-offset-4 hover:text-primary"
-						>
-							{offering.title}
-						</a>
-					) : (
-						offering.title
-					)}
-				</p>
-
-				<p className={meta}>
-					{offering.source_label}
-					{offering.issuer ? ` · ${offering.issuer}` : ""}
-				</p>
-			</div>
-
-			<ul className="mt-3 flex flex-wrap gap-x-6 gap-y-1.5">
-				{match.checks.map((check) => (
-					<li
-						key={check.label}
-						className="fx-eyebrow flex items-baseline gap-2"
-					>
-						<span className="text-muted">{check.label}</span>
-						<span className={tone[check.verdict]}>{check.detail}</span>
-					</li>
-				))}
-			</ul>
-		</li>
-	);
-}
-
-function Group({
-	title,
-	note,
-	matches,
-}: {
-	title: string;
-	note: string;
-	matches: Match[];
-}) {
-	if (matches.length === 0) return null;
-
-	return (
-		<Panel
-			title={title}
-			status={<span className="text-muted">{matches.length}</span>}
-		>
-			<p className="border-b border-border px-5 py-3 text-sm text-pretty text-muted">
-				{note}
-			</p>
-			<ul>
-				{matches.slice(0, PER_GROUP).map((match) => (
-					<Result key={match.offering.id} match={match} />
-				))}
-			</ul>
-
-			{matches.length > PER_GROUP ? (
-				<p className="border-t border-border px-5 py-3 text-sm text-muted">
-					Showing {PER_GROUP} of {matches.length}. Narrow the mandate to see the
-					rest — a list this long usually means a criterion is missing rather
-					than that the market is this wide.
-				</p>
-			) : null}
-		</Panel>
-	);
-}
-
 /*
  * Deal sourcing.
  *
@@ -174,7 +83,15 @@ function Group({
 export default async function SourcingPage({
 	searchParams,
 }: {
-	searchParams: Promise<{ mandate?: string }>;
+	searchParams: Promise<{
+		mandate?: string;
+		verdict?: string;
+		class?: string;
+		place?: string;
+		ccy?: string;
+		q?: string;
+		page?: string;
+	}>;
 }) {
 	const access = await getAccess();
 
@@ -210,6 +127,55 @@ export default async function SourcingPage({
 
 	// True when the index is larger than one run can hold.
 	const truncated = stats.live > offerings.length;
+
+	const filters: Filters = {
+		verdict: params.verdict ?? "all",
+		assetClass: params.class ?? "",
+		jurisdiction: params.place ?? "",
+		currency: params.ccy ?? "",
+		q: (params.q ?? "").slice(0, 100),
+		page: Math.max(1, Number.parseInt(params.page ?? "1", 10) || 1),
+	};
+
+	/*
+	 * One list, ordered so the verdict is the first thing that separates rows
+	 * rather than the only way to find them: matches first, then the ones
+	 * nobody can verify, then the exclusions, each already ranked by yield.
+	 */
+	const everything: Match[] = results
+		? [...results.matched, ...results.unverifiable, ...results.excluded]
+		: [];
+
+	const needle = filters.q.trim().toLowerCase();
+
+	const shown = everything.filter((match) => {
+		const o = match.offering;
+
+		if (filters.verdict !== "all" && match.status !== filters.verdict)
+			return false;
+		if (filters.assetClass && o.asset_class !== filters.assetClass)
+			return false;
+		if (filters.jurisdiction && o.jurisdiction !== filters.jurisdiction)
+			return false;
+		if (filters.currency && o.currency !== filters.currency) return false;
+
+		if (needle) {
+			const haystack = [o.title, o.issuer, o.platform, o.symbol]
+				.filter(Boolean)
+				.join(" ")
+				.toLowerCase();
+
+			if (!haystack.includes(needle)) return false;
+		}
+
+		return true;
+	});
+
+	/* Filter options come from the index itself, so none of them is a dead end. */
+	const distinct = (pick: (offering: Match["offering"]) => string | null) =>
+		[...new Set(everything.map((m) => pick(m.offering)).filter(Boolean))]
+			.sort((a, b) => (a as string).localeCompare(b as string))
+			.slice(0, 200) as string[];
 
 	return (
 		<div className="mx-auto flex w-full max-w-5xl flex-col gap-6">
@@ -312,38 +278,16 @@ export default async function SourcingPage({
 			) : null}
 
 			{results && stats.live > 0 ? (
-				<>
-					<Group
-						title="Matches"
-						note="Meets every criterion the mandate states."
-						matches={results.matched}
-					/>
-
-					<Group
-						title="Cannot verify"
-						note="Nothing here fails the mandate — the venue simply does not publish a field it asks about. These are the ones worth a phone call."
-						matches={results.unverifiable}
-					/>
-
-					<Group
-						title="Excluded"
-						note="Shown with the reason, so a mandate that is filtering out everything is visible as such rather than looking like an empty market."
-						matches={results.excluded}
-					/>
-
-					{results.matched.length === 0 &&
-					results.unverifiable.length === 0 &&
-					results.excluded.length === 0 ? (
-						<Panel title="No results">
-							<p className="px-5 py-6 text-pretty text-muted">
-								The index has offerings, but none of them were even considered
-								against this mandate. That usually means the crawl stored titles
-								without terms — check Sources for what the last run actually
-								parsed.
-							</p>
-						</Panel>
-					) : null}
-				</>
+				<ResultsTable
+					matches={shown}
+					filters={filters}
+					mandateId={selected?.id ?? ""}
+					options={{
+						assetClasses: distinct((o) => o.asset_class),
+						jurisdictions: distinct((o) => o.jurisdiction),
+						currencies: distinct((o) => o.currency),
+					}}
+				/>
 			) : null}
 		</div>
 	);

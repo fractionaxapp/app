@@ -57,6 +57,29 @@ function value(
 	return undefined;
 }
 
+/** A list of short labels — chains, investor types — however the venue nests them. */
+function toList(input: unknown): string[] | null {
+	if (!Array.isArray(input)) return null;
+
+	const list = input
+		.map((entry) => {
+			if (typeof entry === "string") return entry.trim();
+			if (entry && typeof entry === "object") {
+				const name = (entry as { name?: unknown }).name;
+				if (typeof name === "string") return name.trim();
+			}
+			return "";
+		})
+		.filter(Boolean);
+
+	return list.length > 0 ? list : null;
+}
+
+function toInteger(input: unknown): number | null {
+	const value = toNumber(input);
+	return value === null ? null : Math.round(value);
+}
+
 function toText(input: unknown): string | null {
 	if (input === null || input === undefined) return null;
 	if (typeof input === "string") return input.trim() || null;
@@ -143,6 +166,56 @@ function offeringFrom(
 		dscr: toNumber(
 			value(item, mapping, "dscr", "coverage", "debt_service_coverage"),
 		),
+
+		symbol: toText(value(item, mapping, "symbol", "ticker", "code")),
+		platform: toText(value(item, mapping, "platform", "venue", "marketplace")),
+		networks: toList(value(item, mapping, "networks", "chains", "blockchains")),
+		fundStructure: toText(
+			value(item, mapping, "fundStructure", "fund_structure", "structure"),
+		),
+		subscriptionFrequency: toText(
+			value(item, mapping, "subscriptionFrequency", "subscription_frequency"),
+		),
+		redemptionFrequency: toText(
+			value(item, mapping, "redemptionFrequency", "redemption_frequency"),
+		),
+		incomeTreatment: toText(
+			value(item, mapping, "incomeTreatment", "income_treatment"),
+		),
+		investorTypes: toList(
+			value(item, mapping, "investorTypes", "investor_types", "eligibility"),
+		),
+		aum: toNumber(
+			value(item, mapping, "aum", "assets_under_management", "tvl"),
+		),
+		holdersCount: toInteger(
+			value(item, mapping, "holdersCount", "holders_count", "holders"),
+		),
+		managementFee: toNumber(
+			value(item, mapping, "managementFee", "management_fee", "fee"),
+		),
+		performanceFee: toNumber(
+			value(item, mapping, "performanceFee", "performance_fee"),
+		),
+		subscriptionFee: toNumber(
+			value(item, mapping, "subscriptionFee", "subscription_fee"),
+		),
+		redemptionFee: toNumber(
+			value(item, mapping, "redemptionFee", "redemption_fee"),
+		),
+		inception: toText(value(item, mapping, "inception", "launched", "start")),
+		description: toText(
+			value(item, mapping, "description", "summary", "blurb"),
+		),
+		/*
+		 * Never mapped onto netYield, however tempting the field name is: a
+		 * return with no stated basis is not a yield, and the difference matters
+		 * to whoever is shown the number.
+		 */
+		reportedReturn: toNumber(
+			value(item, mapping, "reportedReturn", "reported_return", "return"),
+		),
+
 		raw: item,
 	} satisfies NormalisedOffering;
 }

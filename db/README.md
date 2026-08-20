@@ -299,14 +299,22 @@ INSERT INTO sources (slug, label, kind, url, mapping) VALUES (
   'rwa-screener', 'RWA.xyz asset screener', 'nextdata',
   'https://app.rwa.xyz/asset-screener',
   '{"items":"pageProps.assets",
-    "externalId":"id",
-    "title":"name",
-    "url":"website",
-    "issuer":"manager.name",
-    "assetClass":"assetClass.name",
+    "externalId":"id", "title":"name", "url":"website",
+    "issuer":"manager.name", "assetClass":"assetClass.name",
     "jurisdiction":"jurisdiction.name",
-    "currency":"minInvestment.currency",
-    "minimum":"minInvestment.amount"}'::jsonb);
+    "currency":"minInvestment.currency", "minimum":"minInvestment.amount",
+    "symbol":"symbol", "platform":"platform.name", "networks":"networks",
+    "fundStructure":"fundStructure",
+    "subscriptionFrequency":"subscriptionFrequency",
+    "redemptionFrequency":"redemptionFrequency.label",
+    "incomeTreatment":"incomeTreatment",
+    "investorTypes":"stats.investorTypes",
+    "aum":"stats.aum", "holdersCount":"stats.holdersCount",
+    "managementFee":"stats.fee", "performanceFee":"stats.performanceFee",
+    "subscriptionFee":"stats.subscriptionFee",
+    "redemptionFee":"stats.redemptionFee",
+    "inception":"stats.inception", "description":"description",
+    "reportedReturn":"stats.return"}'::jsonb);
 ```
 
 Note what is *not* mapped: yield, term, seniority and coverage. These are
@@ -331,3 +339,26 @@ aggregator carrying marketing copy, the model returned a term and a seniority
 for a treasury money market fund — a product that has neither — and "senior
 secured" on a fund share would have passed a senior-secured-only mandate. The
 prompt says to omit what is not stated; a blurb effectively states it.
+
+### What is stored about an offering
+
+`offerings.raw` holds the venue's record exactly as it arrived, so nothing is
+ever lost to a mapping that turned out to be wrong — a field can be promoted to
+a column later and backfilled from what is already there.
+
+On top of that, `0008_offering_detail.sql` gives the fields worth querying and
+showing their own columns: symbol, platform, networks, fund structure,
+subscription and redemption frequency, income treatment, investor types, AUM,
+holders, the four fee columns, inception, description and `reported_return`.
+The sourcing table's filters and its expanded rows read from these.
+
+Two are worth explaining:
+
+- `inception` is text. Venues write it as `5/1/2023` with no stated convention,
+  and choosing between May and January would invent a fact.
+- `reported_return` is deliberately not `net_yield`. It is a return figure as
+  the venue publishes it, with no stated basis — annualised, trailing thirty
+  days, since inception, nobody says. It is kept because discarding data is
+  worse, it is named so nothing can quietly treat it as a yield an investor
+  could act on, and the matcher does not read it. The expanded row shows it
+  under its own caveat rather than beside the real fields.
