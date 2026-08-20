@@ -18,7 +18,11 @@ import { Panel } from "../../_components/panel";
 
 import { dropMandate } from "./actions";
 import { MandateForm } from "./mandate-form";
-import { OfferingTable, type Filters } from "../../_components/offering-table";
+import {
+	OfferingTable,
+	PAGE_SIZES,
+	type Filters,
+} from "../../_components/offering-table";
 
 export const metadata: Metadata = { title: "Sourcing" };
 
@@ -91,6 +95,7 @@ export default async function SourcingPage({
 		ccy?: string;
 		q?: string;
 		page?: string;
+		per?: string;
 	}>;
 }) {
 	const access = await getAccess();
@@ -137,9 +142,10 @@ export default async function SourcingPage({
 		q: (params.q ?? "").slice(0, 100),
 		sort: "recent",
 		page: Math.max(1, Number.parseInt(params.page ?? "1", 10) || 1),
+		perPage: PAGE_SIZES.includes(Number(params.per))
+			? Number(params.per)
+			: PAGE_SIZES[0],
 	};
-
-	const PER_PAGE = 25;
 
 	/*
 	 * One list, ordered so the verdict is the first thing that separates rows
@@ -285,11 +291,10 @@ export default async function SourcingPage({
 				<OfferingTable
 					title="Sourced deals"
 					rows={shown.slice(
-						(Math.max(1, filters.page) - 1) * PER_PAGE,
-						Math.max(1, filters.page) * PER_PAGE,
+						(Math.max(1, filters.page) - 1) * filters.perPage,
+						Math.max(1, filters.page) * filters.perPage,
 					)}
 					total={shown.length}
-					perPage={PER_PAGE}
 					filters={filters}
 					path="/dashboard/sourcing"
 					keep={{ mandate: selected?.id ?? "" }}

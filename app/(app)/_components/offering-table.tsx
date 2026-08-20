@@ -31,7 +31,11 @@ export type Filters = {
 	q: string;
 	sort: string;
 	page: number;
+	perPage: number;
 };
+
+/** Offered page sizes. Ten by default: a screenful, not a scroll. */
+export const PAGE_SIZES = [10, 25, 50, 100];
 
 export type Row = {
 	offering: Offering;
@@ -121,6 +125,8 @@ function href(
 	if (merged.network) params.set("chain", merged.network);
 	if (merged.q) params.set("q", merged.q);
 	if (merged.sort && merged.sort !== "recent") params.set("sort", merged.sort);
+	if (merged.perPage !== PAGE_SIZES[0])
+		params.set("per", String(merged.perPage));
 	if (merged.page > 1) params.set("page", String(merged.page));
 
 	const query = params.toString();
@@ -145,20 +151,34 @@ function Detail({
 	);
 }
 
+/*
+ * One row.
+ *
+ * The shared `name` makes the group exclusive — opening one closes the rest —
+ * which browsers without that support simply ignore, leaving independent
+ * toggles. Same mechanism as the marketing FAQ.
+ *
+ * The open row is marked with an inset shadow rather than a border: a real
+ * border would shift its contents three pixels out of line with every row
+ * above and below it.
+ */
 function Line({ match, showVerdict }: { match: Row; showVerdict: boolean }) {
 	const o: Offering = match.offering;
 
 	return (
-		<details className="group border-b border-border last:border-b-0">
+		<details
+			name="offering"
+			className="group border-b border-border last:border-b-0 open:bg-surface-muted/40 open:shadow-[inset_3px_0_0_var(--color-primary)]"
+		>
 			<summary
 				className={`grid cursor-pointer list-none grid-cols-[1fr_auto] items-baseline gap-x-6 gap-y-2 px-5 py-3.5 transition-colors hover:bg-surface-muted [&::-webkit-details-marker]:hidden ${
 					showVerdict ? COLUMNS : BROWSE_COLUMNS
 				}`}
 			>
-				<span className="min-w-0 text-sm font-semibold">
+				<span className="min-w-0 text-sm font-semibold group-open:text-primary">
 					<span
 						aria-hidden
-						className="mr-2 inline-block text-muted transition-transform group-open:rotate-90"
+						className="mr-2 inline-block text-muted transition-transform group-open:rotate-90 group-open:text-primary"
 					>
 						›
 					</span>
@@ -244,16 +264,6 @@ function Line({ match, showVerdict }: { match: Row; showVerdict: boolean }) {
 						label="Holders"
 						value={o.holders_count?.toLocaleString("en-GB")}
 					/>
-					<Detail
-						label="Management fee"
-						value={
-							num(o.management_fee, 2) ? `${num(o.management_fee, 2)}` : null
-						}
-					/>
-					<Detail
-						label="Performance fee"
-						value={num(o.performance_fee, 2) ?? null}
-					/>
 					<Detail label="Subscriptions" value={o.subscription_frequency} />
 					<Detail label="Redemptions" value={o.redemption_frequency} />
 					<Detail label="Income" value={o.income_treatment} />
@@ -290,6 +300,14 @@ function Line({ match, showVerdict }: { match: Row; showVerdict: boolean }) {
 				<p
 					className={`mt-5 flex flex-wrap items-center gap-x-4 gap-y-1 ${meta}`}
 				>
+					{/* The row shows what fits a row; the record shows everything,
+					    including the venue's untouched payload. */}
+					<Link
+						href={`/dashboard/offerings/${o.id}`}
+						className="font-semibold text-primary underline underline-offset-4"
+					>
+						Full record →
+					</Link>
 					<span>{o.source_label}</span>
 					<span>first seen {stamp.format(o.first_seen)}</span>
 					<span>last seen {stamp.format(o.last_seen)}</span>
@@ -313,7 +331,6 @@ export function OfferingTable({
 	title,
 	rows,
 	total,
-	perPage,
 	filters,
 	path,
 	keep = {},
@@ -325,7 +342,6 @@ export function OfferingTable({
 	title: string;
 	rows: Row[];
 	total: number;
-	perPage: number;
 	filters: Filters;
 	path: string;
 	keep?: Record<string, string>;
@@ -339,6 +355,7 @@ export function OfferingTable({
 	};
 	empty: string;
 }) {
+	const perPage = filters.perPage;
 	const pages = Math.max(1, Math.ceil(total / perPage));
 	const page = Math.min(Math.max(1, filters.page), pages);
 	const start = (page - 1) * perPage;
@@ -555,10 +572,35 @@ export function OfferingTable({
 					</ul>
 
 					<div className="flex flex-wrap items-center justify-between gap-4 border-t border-border px-5 py-3.5">
-						<p className={meta}>
-							{(start + 1).toLocaleString("en-GB")}–
-							{Math.min(start + perPage, total).toLocaleString("en-GB")} of{" "}
-							{total.toLocaleString("en-GB")}
+						<p
+							className={`flex flex-wrap items-center gap-x-4 gap-y-2 ${meta}`}
+						>
+							<span>
+								{(start + 1).toLocaleString("en-GB")}–
+								{Math.min(start + perPage, total).toLocaleString("en-GB")} of{" "}
+								{total.toLocaleString("en-GB")}
+							</span>
+
+							<span className="flex items-center gap-px bg-border">
+								{PAGE_SIZES.map((size) => (
+									<Link
+										key={size}
+										href={href(path, keep, filters, {
+											perPage: size,
+											page: 1,
+										})}
+										aria-current={size === perPage ? "true" : undefined}
+										className={`px-2.5 py-1 transition-colors ${
+											size === perPage
+												? "bg-surface-muted text-foreground"
+												: "bg-surface text-muted hover:text-foreground"
+										}`}
+									>
+										{size}
+									</Link>
+								))}
+							</span>
+							<span className="text-muted/60">per page</span>
 						</p>
 
 						<div className="flex items-center gap-px bg-border">

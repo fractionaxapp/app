@@ -13,14 +13,13 @@ import {
 
 import {
 	OfferingTable,
+	PAGE_SIZES,
 	type Filters,
 	type Row,
 } from "../../_components/offering-table";
 import { Panel } from "../../_components/panel";
 
 export const metadata: Metadata = { title: "Discover" };
-
-const PER_PAGE = 25;
 
 const sorts = [
 	{ key: "recent", label: "Recently seen" },
@@ -55,6 +54,7 @@ export default async function DiscoverPage({
 		q?: string;
 		sort?: string;
 		page?: string;
+		per?: string;
 	}>;
 }) {
 	const access = await getAccess();
@@ -87,6 +87,9 @@ export default async function DiscoverPage({
 			? (params.sort as string)
 			: "recent",
 		page: Math.max(1, Number.parseInt(params.page ?? "1", 10) || 1),
+		perPage: PAGE_SIZES.includes(Number(params.per))
+			? Number(params.per)
+			: PAGE_SIZES[0],
 	};
 
 	const [stats, facets] = await Promise.all([
@@ -101,8 +104,8 @@ export default async function DiscoverPage({
 		network: filters.network,
 		q: filters.q,
 		sort: filters.sort,
-		limit: PER_PAGE,
-		offset: (filters.page - 1) * PER_PAGE,
+		limit: filters.perPage,
+		offset: (filters.page - 1) * filters.perPage,
 	});
 
 	/*
@@ -145,7 +148,6 @@ export default async function DiscoverPage({
 					title="Everything indexed"
 					rows={asRows}
 					total={total}
-					perPage={PER_PAGE}
 					filters={filters}
 					path="/dashboard/discover"
 					showVerdict={false}

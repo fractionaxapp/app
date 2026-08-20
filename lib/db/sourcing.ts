@@ -434,6 +434,24 @@ export async function offeringFacets() {
 	};
 }
 
+/**
+ * One offering, with the venue's original payload.
+ *
+ * `raw` is left out of the list queries — it is the whole record and there is
+ * no sense shipping thirteen hundred of them to render a table — but the page
+ * for a single offering is exactly where it earns its keep.
+ */
+export async function findOffering(id: string) {
+	const rows = await query<Offering & { raw: unknown }>(
+		`SELECT ${OFFERING_COLUMNS}, o.raw
+		FROM offerings o JOIN sources s ON s.id = o.source_id
+		WHERE o.id = $1`,
+		[id],
+	);
+
+	return rows[0] ?? null;
+}
+
 export async function offeringStats() {
 	const rows = await query<{ live: string; withdrawn: string; venues: string }>(
 		`SELECT
