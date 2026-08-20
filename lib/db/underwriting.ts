@@ -42,26 +42,33 @@ const COLUMNS = `
 /**
  * The queue.
  *
- * `state` is "open" for offerings this account has not decided on yet, a
- * verdict to see those, or null for everything. Withdrawn offerings stay
- * visible when they have been decided on — a rejected deal that has since
- * vanished is still part of the record.
+ * `ids` is the set an account's mandates sourced — underwriting works on what
+ * was sourced for you, not on the whole index, so the caller runs the matcher
+ * first and passes what came back.
+ *
+ * `state` is "open" for offerings not decided on yet, a verdict to see those,
+ * or null for everything. Withdrawn offerings stay visible once decided on: a
+ * rejected deal that has since vanished is still part of the record.
  */
 export async function listUnderwritable({
 	userId,
+	ids,
 	state = "open",
 	search = "",
 	limit = 25,
 	offset = 0,
 }: {
 	userId: string;
+	ids: string[];
 	state?: string | null;
 	search?: string;
 	limit?: number;
 	offset?: number;
 }) {
-	const where: string[] = [];
-	const params: unknown[] = [userId];
+	if (ids.length === 0) return { rows: [], total: 0 };
+
+	const params: unknown[] = [userId, ids];
+	const where: string[] = ["o.id = ANY($2::uuid[])"];
 
 	if (state === "open")
 		where.push("u.verdict IS NULL AND o.withdrawn_at IS NULL");

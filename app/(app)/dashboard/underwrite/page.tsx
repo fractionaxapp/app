@@ -4,10 +4,11 @@ import { redirect } from "next/navigation";
 
 import { getAccess } from "@/lib/access";
 import { isDatabaseEnabled } from "@/lib/db/client";
-import { offeringStats } from "@/lib/db/sourcing";
+import { listLiveOfferings, listMandates } from "@/lib/db/sourcing";
 import { decisionCounts, listUnderwritable } from "@/lib/db/underwriting";
 import { findUserByPrivyDid } from "@/lib/db/users";
 import { assess } from "@/lib/sourcing/assess";
+import { runMandate } from "@/lib/sourcing/match";
 
 import { Artwork } from "../../_components/artwork";
 import { Panel } from "../../_components/panel";
@@ -17,6 +18,13 @@ import { decide } from "./actions";
 export const metadata: Metadata = { title: "Underwrite" };
 
 const PER_PAGE = 10;
+
+/*
+ * Offerings loaded to match against, as on the sourcing screen. The index has
+ * to be in memory for the length of a request because a verdict is computed
+ * per row, and the screen says so when it does not all fit.
+ */
+const CONSIDERED = 5000;
 
 const states = [
 	{ key: "open", label: "To do" },
@@ -58,7 +66,12 @@ const stamp = new Intl.DateTimeFormat("en-GB", {
 export default async function UnderwritePage({
 	searchParams,
 }: {
-	searchParams: Promise<{ state?: string; q?: string; page?: string }>;
+	searchParams: Promise<{
+		state?: string;
+		q?: string;
+		page?: string;
+		mandate?: string;
+	}>;
 }) {
 	const access = await getAccess();
 
@@ -87,11 +100,45 @@ export default async function UnderwritePage({
 	const search = (params.q ?? "").slice(0, 100);
 	const page = Math.max(1, Number.parseInt(params.page ?? "1", 10) || 1);
 
-	const [stats, counts, queue] = await Promise.all([
-		offeringStats(),
+	const mandates = await listMandates(user.id);
+
+	const selected =
+		mandates.find((mandate) => mandate.id === params.mandate) ?? null;
+
+	/*
+	 * Underwriting works on what was sourced for you.
+	 *
+	 * The matcher runs here rather than in SQL for the same reason it does on
+	 * the sourcing screen: one set of rules produces both the verdict and its
+	 * reason, and splitting that across two languages is how the two drift.
+	 *
+	 * Deals that cannot be verified are queued alongside the ones that matched.
+	 * They are not failures — the venue simply did not publish a field the
+	 * mandate asks about — and they are exactly the ones a person needs to look
+	 * at, which is what this screen is for.
+	 */
+	const offerings =
+		mandates.length > 0 ? await listLiveOfferings(CONSIDERED) : [];
+
+	const sourcedBy = new Map<string, string[]>();
+
+	for (const mandate of selected ? [selected] : mandates) {
+		const { matched, unverifiable } = runMandate(offerings, mandate.criteria);
+
+		for (const { offering } of [...matched, ...unverifiable]) {
+			const seen = sourcedBy.get(offering.id) ?? [];
+			seen.push(mandate.statement);
+			sourcedBy.set(offering.id, seen);
+		}
+	}
+
+	const sourcedIds = [...sourcedBy.keys()];
+
+	const [counts, queue] = await Promise.all([
 		decisionCounts(user.id),
 		listUnderwritable({
 			userId: user.id,
+			ids: sourcedIds,
 			state: state === "all" ? null : state,
 			search,
 			limit: PER_PAGE,
@@ -103,8 +150,15 @@ export default async function UnderwritePage({
 
 	const href = (changes: Record<string, string>) => {
 		const next = new URLSearchParams();
-		const merged = { state, q: search, page: String(page), ...changes };
+		const merged = {
+			state,
+			q: search,
+			page: String(page),
+			mandate: selected?.id ?? "",
+			...changes,
+		};
 
+		if (merged.mandate) next.set("mandate", merged.mandate);
 		if (merged.state !== "open") next.set("state", merged.state);
 		if (merged.q) next.set("q", merged.q);
 		if (merged.page !== "1") next.set("page", merged.page);
@@ -117,7 +171,7 @@ export default async function UnderwritePage({
 		<div className="mx-auto flex w-full max-w-5xl flex-col gap-6">
 			<section className="grid gap-px border border-border bg-border sm:grid-cols-4">
 				{[
-					{ label: "Indexed", value: stats.live, tone: "text-muted" },
+					{ label: "Sourced", value: sourcedIds.length, tone: "text-muted" },
 					{ label: "Accepted", value: counts.accepted, tone: "text-primary" },
 					{ label: "Watching", value: counts.watching, tone: "text-accent" },
 					{ label: "Rejected", value: counts.rejected, tone: "text-muted" },
@@ -134,12 +188,67 @@ export default async function UnderwritePage({
 			</section>
 
 			<p className="px-1 text-sm text-pretty text-muted">
-				There are no offering documents in the index — only the fields venues
-				publish about themselves — so nothing here forms a credit view. What it
-				reports is how much of one the published fields would support, and what
-				is missing. The decision is yours, and it is recorded with your
-				reasoning.
+				These are the deals your mandates sourced — the ones that matched, and
+				the ones nobody can verify against what the venue published. There are
+				no offering documents in the index, so nothing here forms a credit view:
+				it reports how much of one the published fields would support, and what
+				is missing. The decision is yours, recorded with your reasoning.
 			</p>
+
+			{mandates.length === 0 ? (
+				<Panel title="Nothing sourced yet">
+					<p className="px-5 py-6 text-pretty text-muted">
+						Underwriting works on what your mandates sourced, and you have not
+						written one.{" "}
+						<Link
+							href="/dashboard/sourcing"
+							className="text-primary underline underline-offset-4"
+						>
+							Describe what you are looking for
+						</Link>{" "}
+						and the deals that fit it arrive here.
+					</p>
+				</Panel>
+			) : (
+				<Panel
+					title="Sourced by"
+					status={
+						<span className="text-muted">
+							{selected ? "One mandate" : `${mandates.length} mandates`}
+						</span>
+					}
+				>
+					<nav className="flex flex-wrap gap-2 px-5 py-3.5">
+						<Link
+							href={href({ mandate: "", page: "1" })}
+							aria-current={selected ? undefined : "page"}
+							className={`fx-eyebrow border px-2.5 py-1.5 transition-colors ${
+								selected
+									? "border-border text-muted hover:text-foreground"
+									: "border-primary text-primary"
+							}`}
+						>
+							Every mandate
+						</Link>
+
+						{mandates.map((mandate) => (
+							<Link
+								key={mandate.id}
+								href={href({ mandate: mandate.id, page: "1" })}
+								aria-current={selected?.id === mandate.id ? "page" : undefined}
+								title={mandate.statement}
+								className={`max-w-md truncate border px-2.5 py-1.5 font-mono text-xs transition-colors ${
+									selected?.id === mandate.id
+										? "border-primary text-primary"
+										: "border-border text-muted hover:text-foreground"
+								}`}
+							>
+								{mandate.statement}
+							</Link>
+						))}
+					</nav>
+				</Panel>
+			)}
 
 			<Panel
 				title="Underwriting queue"
@@ -189,7 +298,9 @@ export default async function UnderwritePage({
 				{queue.rows.length === 0 ? (
 					<p className="px-5 py-8 text-pretty text-muted">
 						{state === "open"
-							? "Nothing left to look at. Every indexed offering has a decision against it."
+							? sourcedIds.length === 0
+								? "Your mandates matched nothing in the index, so there is nothing to underwrite. Widen a mandate, or add a venue under Administration → Sources."
+								: "Nothing left to look at. Every sourced deal has a decision against it."
 							: "Nothing here yet."}
 					</p>
 				) : (
@@ -221,6 +332,16 @@ export default async function UnderwritePage({
 													<span className={meta}>{offering.symbol}</span>
 												) : null}
 											</p>
+
+											{/* Which mandate put this in front of you. */}
+											{!selected && sourcedBy.get(offering.id)?.length ? (
+												<p className={`mt-1.5 ${meta}`}>
+													Sourced by{" "}
+													<span className="text-muted/80">
+														{sourcedBy.get(offering.id)?.join(" · ")}
+													</span>
+												</p>
+											) : null}
 
 											<p className={`mt-1.5 flex flex-wrap gap-1.5 ${meta}`}>
 												{[
