@@ -18,6 +18,7 @@ import { Panel } from "../../_components/panel";
 
 import { markAllocation } from "./actions";
 import { PlanForm, PolicyForm } from "./forms";
+import { ReceivingWallet } from "./receiving-wallet";
 
 export const metadata: Metadata = { title: "Execute" };
 
@@ -166,6 +167,15 @@ export default async function ExecutePage() {
 					the page sent. A limit the page could edit would not be one.
 				</p>
 			</Panel>
+
+			{/*
+			 * Only once there is something to allocate against. An account that
+			 * signs up, reads, and decides nothing never sees this panel — and so
+			 * never has a wallet made for it.
+			 */}
+			{accepted.length > 0 || allocations.length > 0 ? (
+				<ReceivingWallet />
+			) : null}
 
 			<Panel
 				title="Accepted at underwriting"
