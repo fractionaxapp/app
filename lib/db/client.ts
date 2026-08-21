@@ -47,11 +47,25 @@ function createPool() {
 		// A droplet Postgres defaults to 100 connections shared across everything.
 		// Keep the app's slice modest; raise alongside max_connections.
 		max: Number(process.env.DATABASE_POOL_MAX ?? 10),
-		idleTimeoutMillis: 30_000,
+		/*
+		 * Opening a connection to a managed database on another continent costs
+		 * three to five seconds — TCP, TLS and authentication, before a single
+		 * row moves. The query itself, for the largest read this app makes, is
+		 * about three hundred milliseconds on a connection that is already open.
+		 *
+		 * So the connection is worth keeping. At the old thirty seconds, any
+		 * navigation after a short pause paid the full handshake again, which is
+		 * most navigations a person actually makes. Five minutes covers a working
+		 * session; the retry below covers the connection dying inside it.
+		 */
+		idleTimeoutMillis: Number(process.env.DATABASE_POOL_IDLE_MS ?? 300_000),
 		connectionTimeoutMillis: 10_000,
 		// Stops a NAT or load balancer silently dropping a pooled connection
-		// and handing it back later as a dead one.
+		// and handing it back later as a dead one. The initial delay matters:
+		// left at the system default the first probe can come long after the
+		// middlebox has already forgotten the connection.
 		keepAlive: true,
+		keepAliveInitialDelayMillis: 10_000,
 	});
 
 	/*
@@ -134,6 +148,49 @@ function describeFailure(error: unknown) {
 	);
 }
 
+/*
+ * A pooled connection can be dead before it is handed out. Nothing announces
+ * it: a home router drops an idle NAT entry, a database recycles a session, and
+ * the socket stays open-looking at this end until something is written to it.
+ * Measured on a domestic connection, a pooled connection here dies somewhere
+ * between forty-five and ninety seconds of silence.
+ *
+ * The first query after that does not wait — it fails immediately, with a
+ * network error naming nothing a person could act on. Retrying once costs a
+ * reconnect and turns it into an ordinary slow page.
+ */
+const STALE_CONNECTION = [
+	"Connection terminated unexpectedly",
+	"Client has encountered a connection error and is not queryable",
+	"server closed the connection unexpectedly",
+	"read ECONNRESET",
+	"ECONNRESET",
+	"EPIPE",
+	"EADDRNOTAVAIL",
+];
+
+function isStaleConnection(error: unknown) {
+	if (!(error instanceof Error)) return false;
+
+	const code = (error as NodeJS.ErrnoException).code;
+
+	return STALE_CONNECTION.some(
+		(needle) => error.message.includes(needle) || code === needle,
+	);
+}
+
+/*
+ * Only reads. A write that failed on a dead socket may still have reached the
+ * database — the acknowledgement is what went missing, not necessarily the
+ * statement — and running it a second time would be this product deciding, on
+ * its own, to record something twice. A failed write is reported instead.
+ */
+function isReadOnly(text: string) {
+	const statement = text.trimStart().toUpperCase();
+
+	return statement.startsWith("SELECT") && !statement.includes(" INTO ");
+}
+
 /** Run a parameterised query. Never interpolate values into the SQL string. */
 export async function query<T extends Record<string, unknown>>(
 	text: string,
@@ -143,6 +200,30 @@ export async function query<T extends Record<string, unknown>>(
 		const result = await getPool().query<T>(text, params);
 		return result.rows;
 	} catch (error) {
+		if (isStaleConnection(error)) {
+			if (isReadOnly(text)) {
+				// The pool has already discarded the failed connection; this opens
+				// a fresh one.
+				try {
+					const result = await getPool().query<T>(text, params);
+					return result.rows;
+				} catch (retried) {
+					throw describeFailure(retried);
+				}
+			}
+
+			// A write, which is deliberately left alone. Say that, rather than
+			// leaving a bare socket error to be read as data loss.
+			throw new Error(
+				`The connection to Postgres died while running this statement — ${
+					(error as Error).message
+				}.\nIt writes, so it was not repeated automatically: a statement that ` +
+					"failed after the database accepted it would be recorded twice. " +
+					"Check whether it took effect, then run it again.",
+				{ cause: error },
+			);
+		}
+
 		throw describeFailure(error);
 	}
 }
