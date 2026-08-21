@@ -48,13 +48,15 @@ export function buildPrivyConfig(theme: "light" | "dark"): PrivyClientConfig {
 		 * on demand instead — see createWallet in lib/wallet.
 		 *
 		 * This setting alone does not achieve that, which is the important part.
-		 * The Privy dashboard carries its own embedded_wallet_config, and where
-		 * it says create_on_login: "all-users" it is the one that decides: the
-		 * first account on this project was given an Ethereum wallet AND a
-		 * Solana one nine days after this line was written — and nothing in this
-		 * repository can create a Solana wallet at all, so they were not ours.
+		 * The Privy dashboard carries its own embedded_wallet_config, and when
+		 * the two disagree the dashboard is the one that decides. It said
+		 * create_on_login: "all-users" for nine days after this line was
+		 * written, in which time the first account on the project was given an
+		 * Ethereum wallet and a Solana one — and nothing in this repository can
+		 * create a Solana wallet at all, so they were not ours. Both are off in
+		 * the dashboard as of 21 August 2026.
 		 *
-		 * Keep both in agreement. A commercial decision recorded only in code
+		 * Keep them in agreement. A commercial decision recorded only in code
 		 * that the vendor overrides is not a decision, it is a comment.
 		 */
 		embeddedWallets: {
