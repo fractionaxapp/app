@@ -23,7 +23,21 @@ export function buildPrivyConfig(theme: "light" | "dark"): PrivyClientConfig {
 		appearance: {
 			theme,
 			accentColor: siteConfig.colors.dark,
-			walletChainType: "ethereum-and-solana",
+			/*
+			 * Ethereum only, because that is all this app can actually do.
+			 * Offering Solana put Solana wallets in the sign-in modal while no
+			 * Solana connectors were ever passed to the SDK, so anyone choosing
+			 * one would have found it did not connect. A sign-in screen offering
+			 * a route that dead-ends is worse than one offering fewer routes.
+			 *
+			 * This does not silence the SDK's warning about it: that comes from
+			 * solana_wallet_auth in the Privy dashboard, which nothing in this
+			 * repository can reach. Turn it off there as well.
+			 *
+			 * Widen this the day the /solana entrypoint is wired up in
+			 * lib/wallet, and not before.
+			 */
+			walletChainType: "ethereum-only",
 		},
 
 		/*
@@ -33,8 +47,15 @@ export function buildPrivyConfig(theme: "light" | "dark"): PrivyClientConfig {
 		 * signup means paying for people who never transact. Wallets are created
 		 * on demand instead — see createWallet in lib/wallet.
 		 *
-		 * 'off' is the SDK default in v3; it is stated explicitly here because
-		 * this is a deliberate commercial decision, not an oversight.
+		 * This setting alone does not achieve that, which is the important part.
+		 * The Privy dashboard carries its own embedded_wallet_config, and where
+		 * it says create_on_login: "all-users" it is the one that decides: the
+		 * first account on this project was given an Ethereum wallet AND a
+		 * Solana one nine days after this line was written — and nothing in this
+		 * repository can create a Solana wallet at all, so they were not ours.
+		 *
+		 * Keep both in agreement. A commercial decision recorded only in code
+		 * that the vendor overrides is not a decision, it is a comment.
 		 */
 		embeddedWallets: {
 			ethereum: { createOnLogin: "off" },
